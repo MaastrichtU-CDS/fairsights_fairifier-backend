@@ -14,6 +14,7 @@ import java.io.InputStream;
 public class FileParser {
     public static ResponseEntity ParseFile(MultipartFile file, RepositoryConnection connection, RDFFormat rdfFormat){
         try {
+            RDFFormat format = Rio.getParserFormatForFileName(file.getName()).orElse(RDFFormat.RDFXML);
             connection.begin();
             InputStream stream = file.getInputStream();
             Model model = Rio.parse(stream, "", rdfFormat);
