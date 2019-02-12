@@ -79,6 +79,6 @@ public class R2rmlController {
             LOGGER.error("Cannot clear ontology: " + ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        return ResponseEntity.ok("Ontology cleared");
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
