@@ -4,13 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import nl.maastro.fairifier.config.GraphDbProperties;
-import nl.maastro.fairifier.helpers.RepoConnection;
 import nl.maastro.fairifier.web.dto.CreateRepositoryDto;
 import org.apache.log4j.Logger;
-import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.manager.RemoteRepositoryManager;
 import org.eclipse.rdf4j.repository.manager.RepositoryManager;
-import org.eclipse.rdf4j.rio.RDFFormat;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpEntity;
@@ -19,9 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-
-import java.io.IOException;
-import java.net.URL;
 
 @SpringBootApplication
 public class FairifierApplication {
@@ -52,7 +46,6 @@ public class FairifierApplication {
 		}
 		if(!hasOntoRepo){
 			hasOntoRepo = createRepo(uri, new CreateRepositoryDto(graphDbProperties.getFairOntoDbId(), graphDbProperties.getFairOntoDbTitle()));
-			fillOntologyDb();
 		}
 		if(!hasDataRepo || !hasMappingRepo || !hasOntoRepo){
 			try {
@@ -62,22 +55,6 @@ public class FairifierApplication {
 			}
 		} else{
 			LOGGER.info("Required repositories are available.");
-		}
-	}
-
-	private static void fillOntologyDb() {
-		try {
-			URL url = new URL("http://sparql.cancerdata.org/namespace/roo/sparql");
-			RepositoryConnection connection = RepoConnection.getRepoConnection(graphDbProperties.getBaseUrl(), graphDbProperties.getFairOntoDbId());
-			connection.begin();
-			connection.add(url, graphDbProperties.getBaseUrl(), RDFFormat.RDFXML);
-			connection.commit();
-		} catch (IOException ex){
-			repoManager.removeRepository(graphDbProperties.getFairOntoDbId());
-			ex.getMessage();
-		} catch (Exception ex){
-			repoManager.removeRepository(graphDbProperties.getFairOntoDbId());
-			ex.getMessage();
 		}
 	}
 

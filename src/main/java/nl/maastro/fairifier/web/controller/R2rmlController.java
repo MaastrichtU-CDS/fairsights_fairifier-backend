@@ -2,6 +2,7 @@ package nl.maastro.fairifier.web.controller;
 
 import nl.maastro.fairifier.config.GraphDbProperties;
 import nl.maastro.fairifier.helpers.FileParser;
+import nl.maastro.fairifier.helpers.RepoConnection;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.manager.RemoteRepositoryManager;
@@ -12,6 +13,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.net.URL;
 
 @RestController
 @RequestMapping("/api")
@@ -39,9 +43,9 @@ public class R2rmlController {
         repoManager.shutDown();
     }
 
-    @PostMapping(value = "/uploadontology", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity uploadOntology(@RequestParam("rdf file") MultipartFile file){
-        if(mappingRepo == null){
+    @PostMapping(value = "/uploadontologyfile", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity uploadOntologyFile(@RequestParam("rdf file") MultipartFile file){
+        if(ontoRepo == null){
             checkRepos();
         }
         ontoRepo.initialize();
@@ -53,8 +57,30 @@ public class R2rmlController {
         }
     }
 
+    @PostMapping(value = "/uploaddefaultontology", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity uploadDefaultOntology(){
+        fillOntologyDb();
+        return ResponseEntity.ok().build();
+    }
+
+    private void fillOntologyDb() {
+        try {
+            URL url = new URL("http://sparql.cancerdata.org/namespace/roo/sparql");
+            RepositoryConnection connection = RepoConnection.getRepoConnection(graphDbProperties.getBaseUrl(), graphDbProperties.getFairOntoDbId());
+            connection.begin();
+            connection.add(url, graphDbProperties.getBaseUrl(), RDFFormat.RDFXML);
+            connection.commit();
+        } catch (IOException ex){
+            repoManager.removeRepository(graphDbProperties.getFairOntoDbId());
+            ex.getMessage();
+        } catch (Exception ex){
+            repoManager.removeRepository(graphDbProperties.getFairOntoDbId());
+            ex.getMessage();
+        }
+    }
+
     @PostMapping(value = "/uploadmapping", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> uploadMapping(@RequestParam("ttl File") MultipartFile file){
+    public ResponseEntity uploadMapping(@RequestParam("ttl File") MultipartFile file){
         if(mappingRepo == null){
             checkRepos();
         }
@@ -69,6 +95,9 @@ public class R2rmlController {
 
     @DeleteMapping(value = "/clearcurrentmapping", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity clearMapping(){
+        if(mappingRepo == null){
+            checkRepos();
+        }
         mappingRepo.initialize();
         RepositoryConnection connection = mappingRepo.getConnection();
         try {
