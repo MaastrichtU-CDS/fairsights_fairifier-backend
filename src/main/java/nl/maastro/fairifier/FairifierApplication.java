@@ -1,13 +1,9 @@
 package nl.maastro.fairifier;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import nl.maastro.fairifier.config.GraphDbProperties;
-import nl.maastro.fairifier.web.dto.CreateRepositoryDto;
-import org.apache.log4j.Logger;
 import org.eclipse.rdf4j.repository.manager.RemoteRepositoryManager;
 import org.eclipse.rdf4j.repository.manager.RepositoryManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpEntity;
@@ -17,10 +13,18 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import nl.maastro.fairifier.config.GraphDbProperties;
+import nl.maastro.fairifier.web.dto.CreateRepositoryDto;
+
 @SpringBootApplication
 public class FairifierApplication {
 
-	private static final Logger LOGGER = Logger.getLogger(FairifierApplication.class);
+    private static final Logger logger = LoggerFactory.getLogger(FairifierApplication.class);
+
 	private static GraphDbProperties graphDbProperties;
 	private static RepositoryManager repoManager;
 
@@ -54,7 +58,7 @@ public class FairifierApplication {
 				e.printStackTrace();
 			}
 		} else{
-			LOGGER.info("Required repositories are available.");
+			logger.info("Required repositories are available.");
 		}
 	}
 
@@ -69,7 +73,7 @@ public class FairifierApplication {
 	}
 
 	private static boolean createRepo(String uri, CreateRepositoryDto repoValues){
-		LOGGER.info("Try creating repository with Id: " + repoValues.getId());
+		logger.info("Try creating repository with Id: " + repoValues.getId());
 		if(repoValues == null){
 			return false;
 		}
@@ -84,7 +88,7 @@ public class FairifierApplication {
 			ResponseEntity response = template.exchange(uri, HttpMethod.PUT, entity, String.class);
 			return response.getStatusCode().is2xxSuccessful();
 		} catch (JsonProcessingException e) {
-			LOGGER.error("Error creating database: " + e.getMessage());
+			logger.error("Error creating database: " + e.getMessage());
 			e.printStackTrace();
 		}
 		return false;
