@@ -22,7 +22,5 @@ graphdb:
   fairOntoDbTitle: FAIROntologyDb
 
 swagger:
-  title: FAIRSights Fairifier
-  description: Fairifier
-
-swagger.enabled: true
+  enabled: true
+  title: Fairifier API
