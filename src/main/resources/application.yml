@@ -1,14 +1,12 @@
 cors.allowed-origins:
-    - http://localhost
+  - http://localhost
 
-graphdb:
-  baseUrl: http://localhost:7200/
-  fairMappingDbId: fairmappingdb
-  fairMappingDbTitle: FAIRMappingDb
-  fairDataDbId: fairdatadb
-  fairDataDbTitle: FAIRDataDb
-  fairOntoDbId: fairontologydb
-  fairOntoDbTitle: FAIROntologyDb
+fairifier:
+  rdf-repositories:
+      server-url: http://localhost:7200
+      mapping-repository-id: mappings
+      ontology-repository-id: ontologies
+      data-repository-id: fair-data
 
 swagger:
   enabled: true

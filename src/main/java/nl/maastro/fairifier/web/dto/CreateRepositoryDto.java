@@ -1,14 +1,11 @@
 package nl.maastro.fairifier.web.dto;
 
-import com.mongodb.lang.NonNull;
-
 public class CreateRepositoryDto {
-    @NonNull
+    
     private String id;
     private String location = "";
     private Object params = new Object();
     private String sesameType = "";
-    @NonNull
     private String title;
     private String type = "free";
 
