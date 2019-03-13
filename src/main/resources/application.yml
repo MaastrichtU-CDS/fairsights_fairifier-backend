@@ -12,6 +12,9 @@ spring:
           lob:
             non_contextual_creation: true
 
+cors.allowed-origins:
+    - http://localhost
+
 graphdb:
   baseUrl: http://localhost:7200/
   fairMappingDbId: fairmappingdb
