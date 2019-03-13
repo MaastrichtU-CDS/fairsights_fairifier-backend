@@ -11,7 +11,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import springfox.documentation.service.ApiInfo;
@@ -52,7 +51,6 @@ public class SwaggerConfiguration {
                 .apiInfo(apiInfo())
                 .forCodeGeneration(true)
                 .genericModelSubstitutes(ResponseEntity.class)
-                .ignoredParameterTypes(Pageable.class)
                 .directModelSubstitute(java.time.LocalDate.class, Date.class)
                 .directModelSubstitute(java.time.ZonedDateTime.class, Date.class)
                 .directModelSubstitute(java.time.LocalDateTime.class, Date.class)
