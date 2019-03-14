@@ -1,10 +1,14 @@
 package nl.maastro.fairifier.services;
 
 import java.io.File;
+import java.io.OutputStream;
 
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.Rio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +31,15 @@ public class MappingService {
         return null;
     }
     
+    public void getMappings(RDFFormat format, OutputStream stream) {
+        try (RepositoryConnection connection = mappingRepository.getConnection()) {
+            connection.begin();
+            RDFHandler writer = Rio.createWriter(format, stream);
+            connection.export(writer);
+            connection.commit();
+        }
+    }
+    
     public void updateMappings(MultipartFile file, RDFFormat format) throws Exception {
         if (format == null) {
             logger.info("No RDF format provided; trying to deduce RDF format from file extension");
@@ -44,10 +57,10 @@ public class MappingService {
             connection.clear();
             connection.add(file.getInputStream(), null, format);
             connection.commit();
-            logger.info("Successfully updated R2RML mappings");
-        } catch (Exception e) {
-            logger.error("Failed to update R2RML mappings", e);
-            throw e;
+            
+        } catch (RepositoryException | RDFParseException e) {
+            // Turn these runtime exceptions into a checked exception
+            throw new Exception(e);
         }
     }
     

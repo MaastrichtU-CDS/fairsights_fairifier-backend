@@ -1,5 +1,10 @@
 package nl.maastro.fairifier.web.controller;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import javax.servlet.http.HttpServletResponse;
+
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,11 +35,14 @@ public class MappingController {
     public ResponseEntity<Void> uploadMapping(
             @RequestParam(name="file") MultipartFile file,
             @RequestParam(name="format", required=false) RDFFormat format) {
-        logger.info("REST request to upload new mapping");
+        
+        logger.info("REST request to upload new R2RML mapping");
         try {
             mappingService.updateMappings(file, format);
+            logger.info("Successfully uploaded new R2RML mapping");
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            logger.error("Failed to upload new R2RML mapping", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header("errorMessage", e.getMessage())
                     .build();
@@ -42,9 +50,27 @@ public class MappingController {
     }
     
     @GetMapping(value="/mapping/download")
-    public void downloadMapping() {
-        logger.info("REST request to download mapping");
-        // TODO
+    public ResponseEntity<Void> downloadMapping(
+            @RequestParam(required=false, defaultValue="RDFXML") RDFFormat format, 
+            HttpServletResponse response) {
+        logger.info("REST request to download current R2RML mappings");
+        
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddhhmmss");
+            String timeStamp = formatter.format(new Date());
+            String extension = format.getDefaultFileExtension();
+            String fileName = "r2ml-mappings-" + timeStamp + "." + extension;
+            response.setContentType("application/x-download");
+            response.setHeader("Content-disposition", "attachment; filename=" + fileName);  
+            mappingService.getMappings(format, response.getOutputStream());
+            response.flushBuffer();
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.error("Failed to download R2RML mappings", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("errorMessage", e.getMessage())
+                    .build();
+        }
     }
 
 }
