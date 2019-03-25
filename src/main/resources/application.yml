@@ -1,5 +1,6 @@
 cors.allowed-origins:
   - http://localhost
+  - http://localhost:4200
 
 fairifier:
   rdf-repositories:
