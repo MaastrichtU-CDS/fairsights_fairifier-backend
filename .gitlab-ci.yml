@@ -26,11 +26,14 @@ stages:
 build-backend:
   stage: build
   image: maven:3.5.3-jdk-8
+  cache:
+    paths:
+      - ./m2/repository
   artifacts:
     paths:
       - java/target/*.jar
   script:
-    - mvn clean package
+    - mvn -Dmaven.repo.local=.m2/repository clean package
   only:
     - master
 
