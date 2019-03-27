@@ -1,8 +1,8 @@
 FROM openjdk:8-jre-alpine 
 
-ENTRYPOINT ["/usr/bin/java", "-jar", "/usr/share/fairifier-backend/fairifier-backend.jar"]
+ARG PORT=8080
 
-ARG JAR_FILE
-ADD target/${JAR_FILE} /usr/share/fairifier-backend/fairifier-backend.jar
+ENTRYPOINT ["/usr/bin/java", "-jar", "/usr/share/fairifier-backend/fairifier-backend.jar", "--server.port=${PORT}"]
+ADD target/*.jar /usr/share/fairifier-backend/fairifier-backend.jar
 
-EXPOSE 8080
+EXPOSE ${PORT}
