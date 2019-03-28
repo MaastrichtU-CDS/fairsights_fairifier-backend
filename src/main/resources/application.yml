@@ -3,11 +3,18 @@ cors.allowed-origins:
   - http://localhost:4200
 
 fairifier:
+  data-sources:
+    - name: h2TestDatabase
+      url: jdbc:h2:file:./db/test;DB_CLOSE_DELAY=-1
+      driver-class-name: org.h2.Driver
+      username: sa
+      password: sa  
+
   rdf-repositories:
-      server-url: http://localhost:7200
-      mapping-repository-id: mappings
-      ontology-repository-id: ontologies
-      data-repository-id: fair-data
+    server-url: http://localhost:7200
+    mapping-repository-id: mappings
+    ontology-repository-id: ontologies
+    data-repository-id: fair-data
 
 swagger:
   enabled: true
