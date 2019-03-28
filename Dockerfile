@@ -7,7 +7,7 @@ RUN echo $(PORT)
 
 RUN echo "port=" + $PORT
 
-ENTRYPOINT ["/usr/bin/java", "-jar", "/usr/share/fairifier-backend/fairifier-backend.jar", "--server.port=" + $PORT]
+ENTRYPOINT ["java", "-jar", "/usr/share/fairifier-backend/fairifier-backend.jar", "--server.port=" + $PORT]
 ADD target/*.jar /usr/share/fairifier-backend/fairifier-backend.jar
 
 EXPOSE $PORT
