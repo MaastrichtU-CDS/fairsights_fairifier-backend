@@ -24,7 +24,9 @@ build:
 
 dockerize:
   stage: dockerize
-  tags: build,docker
+  tags: 
+    - build
+    - docker
   dependencies:
     - build
   script:
