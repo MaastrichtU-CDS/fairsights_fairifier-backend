@@ -21,7 +21,7 @@ public class DataSourceConfigurationProperties {
         
         String name;
         String url;
-        String driver;
+        String driverClassName;
         String username; 
         String password;
         
@@ -41,14 +41,14 @@ public class DataSourceConfigurationProperties {
             this.url = url;
         }
         
-        public String getDriver() {
-            return driver;
+        public String getDriverClassName() {
+            return driverClassName;
         }
-        
-        public void setDriver(String driver) {
-            this.driver = driver;
+
+        public void setDriverClassName(String driverClassName) {
+            this.driverClassName = driverClassName;
         }
-        
+
         public String getUsername() {
             return username;
         }

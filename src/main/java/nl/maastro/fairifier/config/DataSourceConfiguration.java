@@ -28,7 +28,7 @@ public class DataSourceConfiguration {
             dataSourceService.addDataSource(
                     dataSourceProperties.getName(),
                     dataSourceProperties.getUrl(),
-                    dataSourceProperties.getDriver(),
+                    dataSourceProperties.getDriverClassName(),
                     dataSourceProperties.getUsername(),
                     dataSourceProperties.getPassword());
         }

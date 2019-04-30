@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import nl.maastro.fairifier.domain.DatabaseDriver;
 import nl.maastro.fairifier.services.DataSourceService;
 
 @RestController
@@ -35,7 +36,7 @@ public class DataSourceController {
             dataSourceService.addDataSource(
                     dataSourceDto.getName(),
                     dataSourceDto.getUrl(),
-                    dataSourceDto.getDriver(),
+                    dataSourceDto.getDriver().getDriverClassName(),
                     dataSourceDto.getUsername(),
                     dataSourceDto.getPassword());
             return ResponseEntity.ok().build();
@@ -68,7 +69,7 @@ public class DataSourceController {
         
         String name;
         String url;
-        String driver;
+        DatabaseDriver driver;
         String username; 
         String password;
         
@@ -88,14 +89,14 @@ public class DataSourceController {
             this.url = url;
         }
         
-        public String getDriver() {
+        public DatabaseDriver getDriver() {
             return driver;
         }
-        
-        public void setDriver(String driver) {
+
+        public void setDriver(DatabaseDriver driver) {
             this.driver = driver;
         }
-        
+
         public String getUsername() {
             return username;
         }
