@@ -23,8 +23,8 @@ public class DataSourceConfiguration {
     }
     
     @PostConstruct
-    public void initializeDataSources() {
-        for (DataSourceProperties dataSourceProperties : dataSourceConfigurationProperties.getDataSources()) {
+    public void initializeDataSources() throws Exception {
+        for (DataSourceProperties dataSourceProperties : dataSourceConfigurationProperties.getDataSources())  {
             dataSourceService.addDataSource(
                     dataSourceProperties.getName(),
                     dataSourceProperties.getUrl(),
@@ -33,8 +33,5 @@ public class DataSourceConfiguration {
                     dataSourceProperties.getPassword());
         }
     }
-    
-    
-
 
 }
