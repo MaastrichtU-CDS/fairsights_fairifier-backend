@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
-import nl.maastro.fairifier.services.DataSourceService;
+import nl.maastro.fairifier.service.DataSourceService;
 
 @Configuration
 @EnableConfigurationProperties(DataSourceConfigurationProperties.class)

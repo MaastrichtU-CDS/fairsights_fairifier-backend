@@ -1,4 +1,4 @@
-package nl.maastro.fairifier.services;
+package nl.maastro.fairifier.service;
 
 import java.io.File;
 import java.io.OutputStream;

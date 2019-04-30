@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import nl.maastro.fairifier.services.DataSourceService;
+import nl.maastro.fairifier.service.DataSourceService;
 import nl.maastro.fairifier.web.dto.DataSourceDto;
 
 @RestController
