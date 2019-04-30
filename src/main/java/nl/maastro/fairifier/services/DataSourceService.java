@@ -47,6 +47,7 @@ public class DataSourceService {
             throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
         }
         Connection connection = dataSource.getConnection();
+        connection.setReadOnly(true);
         Statement statement = connection.createStatement();
         return statement.executeQuery(sqlQuery);
     }
