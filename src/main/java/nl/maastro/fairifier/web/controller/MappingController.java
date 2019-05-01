@@ -31,6 +31,14 @@ public class MappingController {
         this.mappingService = mappingService;
     }
     
+    @GetMapping(value="/mapping")
+    public ResponseEntity<String> getMapping(
+            @RequestParam(required=false, defaultValue="RDFXML") RDFFormat format) {
+
+        logger.info("REST request to get current R2RML mapping");
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+    
     @PutMapping(value="/mapping/upload")
     public ResponseEntity<Void> uploadMapping(
             @RequestParam(name="file") MultipartFile file,
@@ -53,7 +61,7 @@ public class MappingController {
     public ResponseEntity<Void> downloadMapping(
             @RequestParam(required=false, defaultValue="RDFXML") RDFFormat format, 
             HttpServletResponse response) {
-        logger.info("REST request to download current R2RML mappings");
+        logger.info("REST request to download current R2RML mapping");
         
         try {
             SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddhhmmss");
@@ -73,7 +81,7 @@ public class MappingController {
         }
     }
     
-    @GetMapping(value="/mapping/query")
+    @GetMapping(value="/mapping/sqlquery")
     public ResponseEntity<String> getSqlQuery() {
         logger.info("REST request to get SQL query of current R2RML mapping");
         try {
@@ -102,5 +110,34 @@ public class MappingController {
                     .build();
         }
     }
-
+    
+    @GetMapping(value="/mapping/triplemaps")
+    public ResponseEntity<?> getAllTripleMaps() {
+        logger.info("REST request to get all tripleMap definitions in current R2RML mapping");
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+    
+    @PutMapping(value="/mapping/triplemap")
+    public ResponseEntity<Void> updateTripleMap(
+            @RequestParam String id,
+            @RequestParam String newTripleMap) {
+        
+        logger.info("REST request to update TripleMap for id=" + id);
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+    
+    @GetMapping(value="/mapping/test")
+    public ResponseEntity<?> testMapping(
+            @RequestParam(required=false, defaultValue="10") int limit) {
+        logger.info("REST request to test R2RML mapping");
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+    
+    @GetMapping(value="/mapping/execute")
+    public ResponseEntity<?> executeMapping(
+            @RequestParam(required=false, defaultValue="10") int limit) {
+        logger.info("REST request to execute R2RML mapping");
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+    
 }
