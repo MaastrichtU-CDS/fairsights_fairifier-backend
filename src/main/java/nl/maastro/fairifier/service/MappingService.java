@@ -77,29 +77,35 @@ public class MappingService {
                 + "SELECT DISTINCT ?sqlQuery " 
                 + "WHERE { " 
                 + "    ?s rr:sqlQuery ?sqlQuery . " 
-                + "} LIMIT 100";
+                + "}";
+        
+        logger.info("Executing SPARQL query on mapping repository: " + sparqlQuery);
         
         try (RepositoryConnection connection = mappingRepository.getConnection()) {
             TupleQuery tupleQuery = connection.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery);
-            TupleQueryResult result = tupleQuery.evaluate();
-            if (result.hasNext()) {
-                BindingSet bindingSet = result.next();
-                Value sqlQueryValue = bindingSet.getValue("sqlQuery");
-                if (sqlQueryValue != null) {
-                    return sqlQueryValue.stringValue();
-                } else {
-                    logger.warn("No SQL query found in R2RML mapping");
-                    return null;
+            
+            try (TupleQueryResult result = tupleQuery.evaluate()) {
+                String sqlQueryString = null;
+                if (result.hasNext()) {
+                    BindingSet bindingSet = result.next();
+                    Value sqlQueryValue = bindingSet.getValue("sqlQuery");
+                    if (sqlQueryValue != null) {
+                        sqlQueryString =  sqlQueryValue.stringValue();
+                    }
                 }
-            } else {
-                logger.warn("No SQL query found in R2RML mapping");
-                return null;
+                
+                if (sqlQueryString == null) {
+                    logger.warn("No SQL query found in R2RML mapping");
+                }
+                return sqlQueryString;
             }
         } catch (MalformedQueryException | QueryEvaluationException | RepositoryException | RDFParseException e) {
             // Turn these runtime exceptions into a checked exception
             throw new Exception(e);
         }
     }
+    
+    
     
 }
 
