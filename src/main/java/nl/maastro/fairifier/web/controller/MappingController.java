@@ -72,5 +72,19 @@ public class MappingController {
                     .build();
         }
     }
+    
+    @GetMapping(value="/mapping/query")
+    public ResponseEntity<String> getSqlQuery() {
+        logger.info("REST request to get SQL query of current R2RML mapping");
+        try {
+            String sqlQuery = mappingService.getSqlQuery();
+            return ResponseEntity.ok(sqlQuery);
+        } catch (Exception e) {
+            logger.error("Failed to get SQL query from R2RML mapping", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("errorMessage", e.getMessage())
+                    .build();
+        }
+    }
 
 }
