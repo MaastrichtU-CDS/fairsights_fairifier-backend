@@ -86,5 +86,21 @@ public class MappingController {
                     .build();
         }
     }
+    
+    @PutMapping(value="/mapping/sqlquery")
+    public ResponseEntity<Void> updateSqlQuery(
+            @RequestParam String newSqlQuery) {
+        
+        logger.info("REST request to update SQL query of current R2RML mapping");
+        try {
+            mappingService.updateSqlQuery(newSqlQuery);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.error("Failed to update SQL query", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("errorMessage", e.getMessage())
+                    .build();
+        }
+    }
 
 }

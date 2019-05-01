@@ -10,6 +10,8 @@ import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
+import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.query.UpdateExecutionException;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -99,13 +101,29 @@ public class MappingService {
                 }
                 return sqlQueryString;
             }
-        } catch (MalformedQueryException | QueryEvaluationException | RepositoryException | RDFParseException e) {
+        } catch (MalformedQueryException | QueryEvaluationException | RepositoryException e) {
             // Turn these runtime exceptions into a checked exception
             throw new Exception(e);
         }
     }
     
-    
+    public void updateSqlQuery(String newSqlQuery) throws Exception {
+        
+        String sparqlUpdate = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
+                + "DELETE { ?s rr:sqlQuery ?oldSqlQuery }" 
+                + "INSERT { ?s rr:sqlQuery " + newSqlQuery + " }"
+                + "WHERE  { ?s rr:sqlQuery ?oldSqlQuery }";
+        
+        logger.info("Executing SPARQL update on mapping repository: " + sparqlUpdate);
+                
+        try (RepositoryConnection connection = mappingRepository.getConnection()) {
+            Update update = connection.prepareUpdate(QueryLanguage.SPARQL, sparqlUpdate);
+            update.execute();
+        } catch (MalformedQueryException | UpdateExecutionException | RepositoryException e) {
+            // Turn these runtime exceptions into a checked exception
+            throw new Exception(e);
+        }
+    }
     
 }
 
