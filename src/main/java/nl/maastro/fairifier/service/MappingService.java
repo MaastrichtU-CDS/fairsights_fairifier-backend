@@ -110,8 +110,8 @@ public class MappingService {
     public void updateSqlQuery(String newSqlQuery) throws Exception {
         
         String sparqlUpdate = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
-                + "DELETE { ?s rr:sqlQuery ?oldSqlQuery }" 
-                + "INSERT { ?s rr:sqlQuery " + newSqlQuery + " }"
+                + "DELETE { ?s rr:sqlQuery ?oldSqlQuery } " 
+                + "INSERT { ?s rr:sqlQuery \"\"\"" + newSqlQuery + "\"\"\" } "
                 + "WHERE  { ?s rr:sqlQuery ?oldSqlQuery }";
         
         logger.info("Executing SPARQL update on mapping repository: " + sparqlUpdate);
@@ -124,6 +124,16 @@ public class MappingService {
             throw new Exception(e);
         }
     }
+    
+    public void test(int limit) {
+        
+    }
+    
+    public void execute() {
+        
+    }
+    
+    
     
 }
 
