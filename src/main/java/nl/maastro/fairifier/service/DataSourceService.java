@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.stereotype.Service;
 
+import nl.maastro.fairifier.domain.DatabaseDriver;
+
 @Service
 public class DataSourceService {
     
@@ -40,19 +42,35 @@ public class DataSourceService {
         return dataSource;
     }
     
-    public ResultSet performSqlQuery(String dataSourceName, String sqlQuery) throws Exception {
+    public Map<String, List<String>> performSqlQuery(String dataSourceName, String sqlQuery) throws Exception {
         logger.info("Performing SQL query: " + sqlQuery);
         DataSource dataSource = dataSources.get(dataSourceName);
         if (dataSource == null) {
             throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
         }
-        Connection connection = dataSource.getConnection();
-        connection.setReadOnly(true);
-        Statement statement = connection.createStatement();
-        return statement.executeQuery(sqlQuery);
+        try (Connection connection = dataSource.getConnection(); ) {
+            connection.setReadOnly(true);
+            try (Statement statement = connection.createStatement()) {
+                try (ResultSet resultSet = statement.executeQuery(sqlQuery)) {
+                    return toHashMap(resultSet);
+                }
+            }
+            
+        }
     }
     
-    public static Map<String, List<String>> toHashMap(ResultSet resultSet) throws SQLException {
+    public DatabaseDriver getDatabaseDriver(String dataSourceName) throws Exception {
+        DataSource dataSource = dataSources.get(dataSourceName);
+        if (dataSource == null) {
+            throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
+        }
+        try (Connection connection = dataSource.getConnection()) {
+            String databaseProductName = connection.getMetaData().getDatabaseProductName();
+            return DatabaseDriver.fromProductName(databaseProductName);
+        }
+    }
+    
+    private static Map<String, List<String>> toHashMap(ResultSet resultSet) throws SQLException {
         int numberOfColumns = resultSet.getMetaData().getColumnCount();
         Map<String, List<String>> resultHashMap = new HashMap<>();
         for (int columnIndex = 1; columnIndex <= numberOfColumns; columnIndex++) {
@@ -67,5 +85,6 @@ public class DataSourceService {
         }
         return resultHashMap;
     }
+    
     
 }

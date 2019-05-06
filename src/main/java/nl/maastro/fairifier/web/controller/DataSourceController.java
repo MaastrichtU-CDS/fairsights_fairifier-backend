@@ -1,6 +1,5 @@
 package nl.maastro.fairifier.web.controller;
 
-import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import nl.maastro.fairifier.domain.DatabaseDriver;
 import nl.maastro.fairifier.service.DataSourceService;
 import nl.maastro.fairifier.web.dto.DataSourceDto;
 
@@ -23,6 +23,11 @@ import nl.maastro.fairifier.web.dto.DataSourceDto;
 public class DataSourceController {
     
     private final Logger logger = LoggerFactory.getLogger(DataSourceController.class);
+    
+    private static final String REGEX_SELECT = "(?i)(?s)(SELECT)";
+    private static final String REGEX_SELECT_TOP = "(?i)(?s)(SELECT)(\\s+)(TOP)(\\s+)(\\(?)(\\d+)(\\)?)";
+    private static final String REGEX_LIMIT = "(?i)(?s)(LIMIT)(\\s+)(\\d+).*";
+    
     DataSourceService dataSourceService;
     
     public DataSourceController(DataSourceService dataSourceService) {
@@ -51,17 +56,43 @@ public class DataSourceController {
     @GetMapping("/datasource/query")
     public ResponseEntity<Map<String, List<String>>> addDataSource(
             @RequestParam String dataSourceName,
-            @RequestParam String sqlQuery) {
+            @RequestParam String sqlQuery,
+            @RequestParam(required=false) Integer resultsLimit) {
         logger.info("REST request to perform SQL query on DataSource " + dataSourceName);
         try {
-            ResultSet resultSet = dataSourceService.performSqlQuery(dataSourceName, sqlQuery);
-            Map<String, List<String>> resultMap = DataSourceService.toHashMap(resultSet);
-            return ResponseEntity.ok(resultMap);
+            if (resultsLimit != null) {
+                DatabaseDriver databaseDriver = dataSourceService.getDatabaseDriver(dataSourceName);
+                sqlQuery = setResultsLimit(sqlQuery, databaseDriver, resultsLimit);
+            }
+            Map<String, List<String>> result = dataSourceService.performSqlQuery(dataSourceName, sqlQuery);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Failed to perform SQL query", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header("error", e.getLocalizedMessage())
                     .build();
+        }
+    }
+    
+    private String setResultsLimit(String sqlQuery, DatabaseDriver databaseDriver, int resultsLimit) {
+        switch (databaseDriver) {
+            case H2:
+            case MYSQL:
+            case POSTGRESQL:
+                if (sqlQuery.matches(".*" + REGEX_LIMIT  + ".*")) {
+                    return sqlQuery.replaceAll(REGEX_LIMIT, "LIMIT " + resultsLimit);
+                } else {
+                    return sqlQuery + " LIMIT " + resultsLimit;
+                }
+            case SQLSERVER:
+                if (sqlQuery.matches(".*" + REGEX_SELECT_TOP + ".*")) {
+                    return sqlQuery.replaceAll(REGEX_SELECT_TOP, "SELECT TOP " + resultsLimit);
+                } else {
+                    return sqlQuery.replaceAll(REGEX_SELECT, "SELECT TOP " + resultsLimit);
+                }
+        default:
+            logger.warn("Results limit not implemented for databaseDriver: " + databaseDriver);
+            return sqlQuery;
         }
     }
 
