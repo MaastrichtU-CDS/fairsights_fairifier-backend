@@ -37,17 +37,22 @@ public class DataSourceService {
                 .username(username)
                 .password(password)
                 .build();
+        validateDataSource(dataSource);
         dataSources.put(name, dataSource);
         logger.info("Added datasource: " + name);
         return dataSource;
     }
     
     public Map<String, List<String>> performSqlQuery(String dataSourceName, String sqlQuery) throws Exception {
-        logger.info("Performing SQL query: " + sqlQuery);
         DataSource dataSource = dataSources.get(dataSourceName);
         if (dataSource == null) {
             throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
         }
+        return performSqlQuery(dataSource, sqlQuery);
+    }
+    
+    private Map<String, List<String>> performSqlQuery(DataSource dataSource, String sqlQuery) throws Exception {
+        logger.info("Performing SQL query: " + sqlQuery);
         try (Connection connection = dataSource.getConnection(); ) {
             connection.setReadOnly(true);
             try (Statement statement = connection.createStatement()) {
@@ -55,7 +60,19 @@ public class DataSourceService {
                     return toHashMap(resultSet);
                 }
             }
-            
+        }
+    }
+    
+    private void validateDataSource(DataSource dataSource) throws Exception {
+        logger.info("Validating DataSource: " + dataSource);
+        try {
+            DatabaseDriver driver = getDatabaseDriver(dataSource);
+            String validationQuery = driver.getValidationQuery();
+            if (validationQuery != null) {
+                performSqlQuery(dataSource, validationQuery);
+            }
+        } catch (Exception e) {
+            throw new Exception("Invalid DataSource", e);
         }
     }
     
@@ -64,6 +81,10 @@ public class DataSourceService {
         if (dataSource == null) {
             throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
         }
+        return getDatabaseDriver(dataSource);
+    }
+    
+    private DatabaseDriver getDatabaseDriver(DataSource dataSource) throws Exception {
         try (Connection connection = dataSource.getConnection()) {
             String databaseProductName = connection.getMetaData().getDatabaseProductName();
             return DatabaseDriver.fromProductName(databaseProductName);
@@ -85,6 +106,5 @@ public class DataSourceService {
         }
         return resultHashMap;
     }
-    
     
 }
