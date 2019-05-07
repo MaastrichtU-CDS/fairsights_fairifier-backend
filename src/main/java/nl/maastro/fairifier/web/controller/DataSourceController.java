@@ -1,7 +1,11 @@
 package nl.maastro.fairifier.web.controller;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +36,14 @@ public class DataSourceController {
     
     public DataSourceController(DataSourceService dataSourceService) {
         this.dataSourceService = dataSourceService;
+    }
+    
+    @GetMapping("/datasources")
+    public ResponseEntity<Set<String>> getAllDataSources() {
+        logger.info("REST request to get all available DataSources");
+        HashMap<String, DataSource> dataSources = dataSourceService.getDataSources();
+        Set<String> dataSourceNames = dataSources.keySet();
+        return ResponseEntity.ok(dataSourceNames);
     }
     
     @PostMapping("/datasource/add")

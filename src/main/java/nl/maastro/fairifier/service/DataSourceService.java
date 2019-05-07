@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -24,6 +25,10 @@ public class DataSourceService {
     private final Logger logger = LoggerFactory.getLogger(DataSourceService.class);
     
     HashMap<String, DataSource> dataSources = new HashMap<>();
+    
+    public HashMap<String, DataSource> getDataSources() {
+        return this.dataSources;
+    }
     
     public DataSource addDataSource(String name, String url, String driver, 
             String username, String password) throws Exception {
