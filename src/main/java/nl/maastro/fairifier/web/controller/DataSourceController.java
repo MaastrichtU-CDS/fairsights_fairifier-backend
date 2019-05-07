@@ -1,9 +1,10 @@
 package nl.maastro.fairifier.web.controller;
 
+import java.sql.DatabaseMetaData;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -39,11 +40,28 @@ public class DataSourceController {
     }
     
     @GetMapping("/datasources")
-    public ResponseEntity<Set<String>> getAllDataSources() {
-        logger.info("REST request to get all available DataSources");
-        HashMap<String, DataSource> dataSources = dataSourceService.getDataSources();
-        Set<String> dataSourceNames = dataSources.keySet();
-        return ResponseEntity.ok(dataSourceNames);
+    public ResponseEntity<List<DataSourceDto>> getAllDataSources() {
+        logger.info("REST request to get list of all DataSources");
+        try {
+            HashMap<String, DataSource> dataSources = dataSourceService.getDataSources();
+            List<DataSourceDto> dataSourceDtoList = new ArrayList<>();
+            for (String dataSourceName : dataSources.keySet()) {
+                DataSource dataSource = dataSources.get(dataSourceName);
+                DatabaseMetaData databaseMetaData = dataSourceService.getDatabaseMetaData(dataSource);
+                DatabaseDriver driver = DatabaseDriver.fromProductName(databaseMetaData.getDatabaseProductName());
+                DataSourceDto dataSourceDto = new DataSourceDto();
+                dataSourceDto.setName(dataSourceName);
+                dataSourceDto.setDriver(driver);
+                dataSourceDto.setUrl(databaseMetaData.getURL());
+                dataSourceDtoList.add(dataSourceDto);
+            }
+            return ResponseEntity.ok(dataSourceDtoList);
+        } catch (Exception e) {
+            logger.error("Failed to get list of all DataSources", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("error", e.getLocalizedMessage())
+                    .build();
+        }
     }
     
     @PostMapping("/datasource/add")

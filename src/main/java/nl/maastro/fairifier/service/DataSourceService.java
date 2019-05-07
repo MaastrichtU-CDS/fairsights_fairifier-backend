@@ -1,6 +1,7 @@
 package nl.maastro.fairifier.service;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -8,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -81,6 +81,12 @@ public class DataSourceService {
         }
     }
     
+    public DatabaseMetaData getDatabaseMetaData(DataSource dataSource) throws SQLException {
+        try (Connection connection = dataSource.getConnection()) {
+            return connection.getMetaData();
+        }
+    }
+    
     public DatabaseDriver getDatabaseDriver(String dataSourceName) throws Exception {
         DataSource dataSource = dataSources.get(dataSourceName);
         if (dataSource == null) {
@@ -89,11 +95,10 @@ public class DataSourceService {
         return getDatabaseDriver(dataSource);
     }
     
-    private DatabaseDriver getDatabaseDriver(DataSource dataSource) throws Exception {
-        try (Connection connection = dataSource.getConnection()) {
-            String databaseProductName = connection.getMetaData().getDatabaseProductName();
-            return DatabaseDriver.fromProductName(databaseProductName);
-        }
+    private DatabaseDriver getDatabaseDriver(DataSource dataSource) throws SQLException {
+        DatabaseMetaData databaseMetaData = getDatabaseMetaData(dataSource);
+        String databaseProductName = databaseMetaData.getDatabaseProductName();
+        return DatabaseDriver.fromProductName(databaseProductName);
     }
     
     private static Map<String, List<String>> toHashMap(ResultSet resultSet) throws SQLException {
