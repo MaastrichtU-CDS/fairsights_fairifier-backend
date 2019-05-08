@@ -48,6 +48,14 @@ public class DataSourceService {
         return dataSource;
     }
     
+    public DataSource getDataSource(String dataSourceName) throws Exception {
+        DataSource dataSource = dataSources.get(dataSourceName);
+        if (dataSource == null) {
+            throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
+        }
+        return dataSource;
+    }
+    
     public Map<String, List<String>> performSqlQuery(String dataSourceName, String sqlQuery) throws Exception {
         DataSource dataSource = dataSources.get(dataSourceName);
         if (dataSource == null) {

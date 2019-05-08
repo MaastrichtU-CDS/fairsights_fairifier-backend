@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import nl.maastro.fairifier.service.MappingService;
+import nl.maastro.fairifier.service.OntopRDF4JR2RMLMappingExample;
 
 @RestController
 @RequestMapping("/api")
@@ -110,7 +111,7 @@ public class MappingController {
                     .build();
         }
     }
-    
+        
     @GetMapping(value="/mapping/triplemaps")
     public ResponseEntity<?> getAllTripleMaps() {
         logger.info("REST request to get all tripleMap definitions in current R2RML mapping");
@@ -127,17 +128,25 @@ public class MappingController {
     }
     
     @GetMapping(value="/mapping/test")
-    public ResponseEntity<?> testMapping(
+    public ResponseEntity<?> performTestMapping(
             @RequestParam(required=false, defaultValue="10") int limit) {
-        logger.info("REST request to test R2RML mapping");
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        logger.info("REST request to execute R2RML mapping in test mode");
+        try {
+            mappingService.executeTestMapping(limit);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.error("Failed to execute test mapping", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("errorMessage", e.getMessage())
+                    .build();
+        }
     }
     
-    @GetMapping(value="/mapping/execute")
-    public ResponseEntity<?> executeMapping(
-            @RequestParam(required=false, defaultValue="10") int limit) {
-        logger.info("REST request to execute R2RML mapping");
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-    }
+//    @GetMapping(value="/mapping/execute")
+//    public ResponseEntity<?> executeMapping(
+//            @RequestParam(required=false, defaultValue="10") int limit) {
+//        logger.info("REST request to execute R2RML mapping in production mode");
+//        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+//    }
     
 }

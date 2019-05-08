@@ -2,6 +2,9 @@ package nl.maastro.fairifier.service;
 
 import java.io.File;
 import java.io.OutputStream;
+import java.sql.DatabaseMetaData;
+
+import javax.sql.DataSource;
 
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.BindingSet;
@@ -25,14 +28,22 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import it.unibz.inf.ontop.injection.OntopSQLOWLAPIConfiguration;
+import it.unibz.inf.ontop.rdf4j.repository.OntopRepository;
+
 @Service
 public class MappingService {
     
     private final Logger logger = LoggerFactory.getLogger(MappingService.class);
-    private Repository mappingRepository;
     
-    public MappingService(@Qualifier("mappingRepository") Repository mappingRepository) {
+    private Repository mappingRepository;
+    private DataSourceService dataSourceService;
+    
+    public MappingService(
+            @Qualifier("mappingRepository") Repository mappingRepository,
+            DataSourceService dataSourceService) {
         this.mappingRepository =  mappingRepository;
+        this.dataSourceService = dataSourceService;
     }
     
     public File createBackup() {
@@ -125,15 +136,52 @@ public class MappingService {
         }
     }
     
-    public void test(int limit) {
+    public void executeTestMapping(int limit) throws Exception {
         
+        String ontology = "./ROO.0.5.owl";
+        String r2rmlFile = "./mapping.ttl";
+        String sparqlQuery = "select * where { "
+                + "    ?s ?p ?o . " 
+                + "} limit 100 ";
+        
+        DataSource dataSource = dataSourceService.getDataSource("clinical1");
+        DatabaseMetaData dataSourceMetaData = dataSourceService.getDatabaseMetaData(dataSource);
+        String jdbcUrl = dataSourceMetaData.getURL();
+        String jdbcDriver = dataSourceMetaData.getDriverName();
+        String jdbcUser= dataSourceMetaData.getUserName();
+        String jdbcPassword = "";
+        
+        OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
+        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder
+                .ontologyFile(ontology)
+                .r2rmlMappingFile(r2rmlFile)
+                .jdbcUrl(jdbcUrl)
+                .jdbcDriver(jdbcDriver)
+                .jdbcUser(jdbcUser)
+                .jdbcPassword(jdbcPassword)
+                .enableTestMode()
+                .build();
+        
+        Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
+        virtualRdfRepository.initialize();
+        
+        logger.info("Starting SPARQL query...");
+        try (
+                RepositoryConnection connection = virtualRdfRepository.getConnection();
+                TupleQueryResult result = connection.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery)
+                        .evaluate()
+        ) {
+            logger.info("Parsing query result...");
+            while (result.hasNext()) {
+                BindingSet bindingSet = result.next();
+                System.out.println(bindingSet);
+            }
+        }
     }
     
     public void execute() {
         
     }
-    
-    
     
 }
 
