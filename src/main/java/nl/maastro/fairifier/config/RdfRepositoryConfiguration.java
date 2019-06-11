@@ -60,28 +60,11 @@ public class RdfRepositoryConfiguration {
     
     private Repository createRepository(String repositoryId) throws Exception {
         try {
-            
-            
-            
-//            HTTPRepositoryConfig impl = new HTTPRepositoryConfig(repositoryId);
-//            SPARQLRepositoryConfig impl = new SPARQLRepositoryConfig();
-            
             SailRepositoryConfig repositoryImplementation = new SailRepositoryConfig(new NativeStoreConfig()); 
             RepositoryConfig repositoryConfig = new RepositoryConfig(repositoryId, repositoryImplementation);
             repositoryConfig.setTitle(repositoryId);
             this.repositoryManager.addRepositoryConfig(repositoryConfig);
             Repository repository = this.repositoryManager.getRepository(repositoryId);
-            
-//            Model repositoryModel = new Model();
-//            RepositoryConfig repositoryConfig = RepositoryConfig.create(repositoryModel, null);
-//            this.repositoryManager.addRepositoryConfig(repositoryConfig);
-//            Repository repository = this.repositoryManager.getRepository(repositoryId);
-            
-            
-//            HTTPRepository repository = new HTTPRepository(
-//                    repositoryConfigurationProperties.getServerUrl(), repositoryId);
-//            repository.initialize();
-            
             logger.info("Created new RDF repository: " + repositoryId);
             return repository;
         } catch (RepositoryException | RepositoryConfigException e) {
