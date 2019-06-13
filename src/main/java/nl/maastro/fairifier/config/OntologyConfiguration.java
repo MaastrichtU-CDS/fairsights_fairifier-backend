@@ -30,28 +30,33 @@ public class OntologyConfiguration {
     }
         
     @PostConstruct
-    public void importOntologies() throws Exception {
+    public void loadOntologies() throws Exception {
+        logger.info("Loading pre-configured ontologies");
         List<OntologyProperties> preconfiguredOntologies = properties.getOntologies();
         if (preconfiguredOntologies != null) {
             for (OntologyProperties ontology : preconfiguredOntologies) {
-                try {
-                    logger.info("Importing pre-configured ontology: " + ontology);
-                    importOntology(ontology);
-                } catch (Exception e) {
-                    logger.error("Failed to import ontology", e);
+                if (ontologyService.isExistingOntologyContext(ontology.getBaseUri())) {
+                    logger.info("Found existing ontology for id=" + ontology.getBaseUri());
+                } else {
+                    try {
+                        logger.info("Loading pre-configured ontology: " + ontology);
+                        loadOntology(ontology);
+                    } catch (Exception e) {
+                        logger.error("Failed to load ontology", e);
+                    }
                 }
             }
         }
     }
     
-    private void importOntology(OntologyProperties ontology) throws Exception {
+    private void loadOntology(OntologyProperties ontology) throws Exception {
         RDFFormat rdfFormat = mapRdfFormat(ontology.getRdfFormat());
         if (ontology.getFile() != null) {
             try (FileInputStream inputStream = new FileInputStream(ontology.getFile())) {
-                ontologyService.addOntology(inputStream, ontology.getBaseUri(), rdfFormat);
+                ontologyService.loadOntology(inputStream, ontology.getBaseUri(), rdfFormat);
             }
         } else if (ontology.getUrl() != null) {
-            ontologyService.addOntology(ontology.getUrl(), ontology.getBaseUri(), rdfFormat); 
+            ontologyService.loadOntology(ontology.getUrl(), ontology.getBaseUri(), rdfFormat); 
         } else {
             throw new Exception("Ontology configuration must contain non-null file or URL; " + ontology);
         }
