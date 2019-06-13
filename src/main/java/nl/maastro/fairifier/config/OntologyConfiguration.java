@@ -35,7 +35,7 @@ public class OntologyConfiguration {
         List<OntologyProperties> preconfiguredOntologies = properties.getOntologies();
         if (preconfiguredOntologies != null) {
             for (OntologyProperties ontology : preconfiguredOntologies) {
-                if (ontologyService.isExistingOntologyContext(ontology.getBaseUri())) {
+                if (ontologyService.isExistingOntology(ontology.getBaseUri())) {
                     logger.info("Found existing ontology for id=" + ontology.getBaseUri());
                 } else {
                     try {

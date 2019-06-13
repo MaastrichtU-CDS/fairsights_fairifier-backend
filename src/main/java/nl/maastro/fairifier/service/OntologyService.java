@@ -28,8 +28,7 @@ public class OntologyService {
     private Repository ontologyRepository;
 
     public OntologyService(
-            @Qualifier("ontologyRepository") Repository ontologyRepository,
-            DataSourceService dataSourceService) {
+            @Qualifier("ontologyRepository") Repository ontologyRepository) {
         this.ontologyRepository = ontologyRepository;
     }
     
