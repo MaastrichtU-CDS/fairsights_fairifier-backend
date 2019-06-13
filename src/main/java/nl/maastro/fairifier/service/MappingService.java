@@ -42,7 +42,7 @@ public class MappingService {
     public MappingService(
             @Qualifier("mappingRepository") Repository mappingRepository,
             DataSourceService dataSourceService) {
-        this.mappingRepository =  mappingRepository;
+        this.mappingRepository = mappingRepository;
         this.dataSourceService = dataSourceService;
     }
     
@@ -65,8 +65,7 @@ public class MappingService {
             logger.info("No RDF format provided; trying to deduce RDF format from file extension");
             format = Rio.getParserFormatForFileName(file.getOriginalFilename())
                     .orElseThrow(() -> new Exception(
-                            "Unable to deduce RDF format from file name '"
-                            + file.getName() + "'"));
+                            "Unable to deduce RDF format from file name '" + file.getName() + "'"));
             logger.info("Using RDF format: " + format);
         }
         
