@@ -1,5 +1,6 @@
 package nl.maastro.fairifier.service;
 
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,14 +58,19 @@ public class OntologyService {
                             "Unable to deduce RDF format from file name '" + file.getName() + "'"));
             logger.info("Using RDF format: " + format);
         }
-        
+        try (InputStream inputStream = file.getInputStream()) {
+            addOntology(inputStream, baseUri, format);
+        }
+    }
+    
+    public void addOntology(InputStream inputStream, String baseUri, RDFFormat format) throws Exception {
         SimpleValueFactory factory = SimpleValueFactory.getInstance();
-        IRI context = factory.createIRI(baseUri);
-        
+        IRI context = factory.createIRI(baseUri.toLowerCase());
         try (RepositoryConnection connection = ontologyRepository.getConnection()) {
             connection.begin();
-            connection.add(file.getInputStream(), baseUri, format, context);
+            connection.add(inputStream, baseUri, format, context);
             connection.commit();
+            logger.info("Added new ontology: " + baseUri);
         } catch (RepositoryException | RDFParseException e) {
             // Turn these runtime exceptions into a checked exception
             throw new Exception(e);
@@ -73,11 +79,12 @@ public class OntologyService {
     
     public void addOntology(URL url, String baseUri, RDFFormat format) throws Exception {
         SimpleValueFactory factory = SimpleValueFactory.getInstance();
-        IRI context = factory.createIRI(baseUri);
+        IRI context = factory.createIRI(baseUri.toLowerCase());
         try (RepositoryConnection connection = ontologyRepository.getConnection()) {
             connection.begin();
             connection.add(url, baseUri, format, context);        
             connection.commit();
+            logger.info("Added new ontology: " + baseUri);
         } catch (RepositoryException | RDFParseException e) {
             // Turn these runtime exceptions into a checked exception
             throw new Exception(e);

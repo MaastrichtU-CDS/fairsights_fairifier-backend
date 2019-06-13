@@ -64,7 +64,7 @@ public class OntologyController {
     public ResponseEntity<Void> importOntologyFromUrl(
             @RequestParam(name="url") URL url,
             @RequestParam(name="baseUri") String baseUri,
-            @RequestParam(name="format", required=false) RDFFormat format) {
+            @RequestParam(name="format") RDFFormat format) {
         logger.info("REST request to import ontology from URL");
         try {
             ontologyService.addOntology(url, baseUri, format);
