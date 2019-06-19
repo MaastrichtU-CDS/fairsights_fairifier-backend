@@ -1,9 +1,16 @@
 package nl.maastro.fairifier.service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Paths;
 import java.sql.DatabaseMetaData;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
 import org.eclipse.rdf4j.model.Value;
@@ -35,6 +42,9 @@ import it.unibz.inf.ontop.rdf4j.repository.OntopRepository;
 public class MappingService {
     
     private final Logger logger = LoggerFactory.getLogger(MappingService.class);
+    private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyyMMddhhmmss");
+    
+    private static final String BACKUP_DIRECTORY = ".\\backup";
     
     private Repository mappingRepository;
     private DataSourceService dataSourceService;
@@ -46,12 +56,31 @@ public class MappingService {
         this.dataSourceService = dataSourceService;
     }
     
-    public File createBackup() {
-        // TODO
-        return null;
+    @PostConstruct
+    public static void createBackupDirectory() {
+        File backupDirectory = new File(BACKUP_DIRECTORY);
+        if (!backupDirectory.isDirectory()) {
+            backupDirectory.mkdirs();
+        }
     }
     
-    public void getMappings(RDFFormat format, OutputStream stream) {
+    public File createBackup() throws Exception {
+        RDFFormat rdfFormat = RDFFormat.RDFXML;
+        String timeStamp = dateFormatter.format(new Date());
+        String extension = rdfFormat.getDefaultFileExtension();
+        String fileName = "r2ml-mapping-" + timeStamp + "." + extension;
+        File file = Paths.get(BACKUP_DIRECTORY, fileName).toFile();
+        saveMappingToFile(rdfFormat, file);
+        return file;
+    }
+    
+    private void saveMappingToFile(RDFFormat format, File file) throws FileNotFoundException, IOException {
+        try (OutputStream outputStream = new FileOutputStream(file)) {
+            getMapping(format, outputStream);
+        }
+    }
+    
+    public void getMapping(RDFFormat format, OutputStream stream) {
         try (RepositoryConnection connection = mappingRepository.getConnection()) {
             connection.begin();
             RDFHandler writer = Rio.createWriter(format, stream);
@@ -60,7 +89,7 @@ public class MappingService {
         }
     }
     
-    public void updateMappings(MultipartFile file, RDFFormat format) throws Exception {
+    public void updateMapping(MultipartFile file, RDFFormat format) throws Exception {
         if (format == null) {
             logger.info("No RDF format provided; trying to deduce RDF format from file extension");
             format = Rio.getParserFormatForFileName(file.getOriginalFilename())
@@ -69,7 +98,11 @@ public class MappingService {
             logger.info("Using RDF format: " + format);
         }
         
-        createBackup();
+        try {
+            createBackup();
+        } catch (Exception e) {
+            logger.error("Failed to create backup of current mapping", e);
+        }
         
         try (RepositoryConnection connection = mappingRepository.getConnection()) {
             connection.begin();

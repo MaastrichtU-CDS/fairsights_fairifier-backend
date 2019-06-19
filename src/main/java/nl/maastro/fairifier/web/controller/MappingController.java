@@ -25,6 +25,7 @@ import nl.maastro.fairifier.service.OntopRDF4JR2RMLMappingExample;
 public class MappingController {
     
     private final Logger logger = LoggerFactory.getLogger(MappingController.class);
+    private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyyMMddhhmmss");
     
     private MappingService mappingService;
     
@@ -47,7 +48,7 @@ public class MappingController {
         
         logger.info("REST request to upload new R2RML mapping");
         try {
-            mappingService.updateMappings(file, format);
+            mappingService.updateMapping(file, format);
             logger.info("Successfully uploaded new R2RML mapping");
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -65,13 +66,12 @@ public class MappingController {
         logger.info("REST request to download current R2RML mapping");
         
         try {
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddhhmmss");
-            String timeStamp = formatter.format(new Date());
+            String timeStamp = dateFormatter.format(new Date());
             String extension = format.getDefaultFileExtension();
-            String fileName = "r2ml-mappings-" + timeStamp + "." + extension;
+            String fileName = "r2ml-mapping-" + timeStamp + "." + extension;
             response.setContentType("application/x-download");
             response.setHeader("Content-disposition", "attachment; filename=" + fileName);  
-            mappingService.getMappings(format, response.getOutputStream());
+            mappingService.getMapping(format, response.getOutputStream());
             response.flushBuffer();
             return ResponseEntity.ok().build();
         } catch (Exception e) {
