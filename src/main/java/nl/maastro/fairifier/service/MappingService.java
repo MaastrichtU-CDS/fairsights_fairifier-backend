@@ -9,10 +9,13 @@ import java.nio.file.Paths;
 import java.sql.DatabaseMetaData;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
+import org.apache.commons.rdf.api.Graph;
+import org.apache.commons.rdf.rdf4j.RDF4J;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -169,46 +172,82 @@ public class MappingService {
     }
     
     public void executeTestMapping(int limit) throws Exception {
+        HashMap<String, DataSource> dataSources = dataSourceService.getDataSources();
+        if (dataSources.isEmpty()) {
+            throw new Exception("No DataSources found; unable to execute mapping");
+        }
         
-        String ontology = "./ROO.0.5.owl";
-        String r2rmlFile = "./mapping.ttl";
+        // Assume there is a single DataSource
+        String dataSourceName = dataSources.keySet().iterator().next();
+        DataSource dataSource = dataSources.get(dataSourceName);
+        logger.info("Executing mapping for dataSource=" + dataSourceName);
+        
+        Repository virtualRdfRepository = createVirtualRdfRepository(dataSource);
+        
         String sparqlQuery = "select * where { "
                 + "    ?s ?p ?o . " 
-                + "} limit 100 ";
-        
-        DataSource dataSource = dataSourceService.getDataSource("clinical1");
+                + "} limit " + limit;
+        executeSparqlQuery(virtualRdfRepository, sparqlQuery);
+    }
+    
+    private Repository createVirtualRdfRepository(DataSource dataSource) throws Exception {
         DatabaseMetaData dataSourceMetaData = dataSourceService.getDatabaseMetaData(dataSource);
         String jdbcUrl = dataSourceMetaData.getURL();
         String jdbcDriver = dataSourceMetaData.getDriverName();
         String jdbcUser= dataSourceMetaData.getUserName();
-        String jdbcPassword = "";
+        String jdbcPassword = ""; // leave empty for now
+        
+        String r2rmlFile = "./mapping.ttl";
         
         OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
         OntopSQLOWLAPIConfiguration repositoryConfiguration = builder
-                .ontologyFile(ontology)
-                .r2rmlMappingFile(r2rmlFile)
                 .jdbcUrl(jdbcUrl)
                 .jdbcDriver(jdbcDriver)
                 .jdbcUser(jdbcUser)
                 .jdbcPassword(jdbcPassword)
+                .r2rmlMappingFile(r2rmlFile)
                 .enableTestMode()
                 .build();
         
         Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
-        virtualRdfRepository.initialize();
-        
-        logger.info("Starting SPARQL query...");
+        try {
+            virtualRdfRepository.initialize();
+            return virtualRdfRepository;
+        } catch (RepositoryException e) {
+            // Turn this runtime exception into a checked exception
+            throw new Exception(e);
+        }
+    }
+    
+    private void executeSparqlQuery(Repository rdfRepository, String sparqlQuery) {
         try (
-                RepositoryConnection connection = virtualRdfRepository.getConnection();
-                TupleQueryResult result = connection.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery)
-                        .evaluate()
+                RepositoryConnection connection = rdfRepository.getConnection();
+                TupleQueryResult result = connection.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery).evaluate()
         ) {
             logger.info("Parsing query result...");
             while (result.hasNext()) {
                 BindingSet bindingSet = result.next();
-                System.out.println(bindingSet);
+                logger.debug(bindingSet.toString());
             }
         }
+    }
+    
+    private Graph getGraph() throws Exception {
+        try (RepositoryConnection connection = mappingRepository.getConnection()) {
+            connection.begin();
+            RDF4J rdf4j = new RDF4J();
+            Graph graph = rdf4j.asGraph(connection.getRepository());
+            connection.commit();
+            return graph;
+        } catch (RepositoryException e) {
+            // Turn this runtime exceptions into a checked exception
+            throw new Exception(e);
+        }
+    }
+    
+    public void runOntopExample() throws Exception {
+        OntopRDF4JR2RMLMappingExample example = new OntopRDF4JR2RMLMappingExample();
+        example.run();
     }
     
     public void execute() {
