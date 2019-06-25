@@ -2,6 +2,7 @@ package nl.maastro.fairifier.web.controller;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import nl.maastro.fairifier.service.MappingService;
-import nl.maastro.fairifier.service.OntopRDF4JR2RMLMappingExample;
+import nl.maastro.fairifier.web.dto.TripleDto;
 
 @RestController
 @RequestMapping("/api")
@@ -97,9 +98,7 @@ public class MappingController {
     }
     
     @PutMapping(value="/mapping/sqlquery")
-    public ResponseEntity<Void> updateSqlQuery(
-            @RequestParam String newSqlQuery) {
-        
+    public ResponseEntity<Void> updateSqlQuery(@RequestParam String newSqlQuery) {
         logger.info("REST request to update SQL query of current R2RML mapping");
         try {
             mappingService.updateSqlQuery(newSqlQuery);
@@ -128,12 +127,12 @@ public class MappingController {
     }
     
     @GetMapping(value="/mapping/test")
-    public ResponseEntity<?> performTestMapping(
+    public ResponseEntity<List<TripleDto>> performTestMapping(
             @RequestParam(required=false, defaultValue="10") int limit) {
-        logger.info("REST request to execute R2RML mapping in test mode");
+        logger.info("REST request to test R2RML mapping");
         try {
-            mappingService.executeTestMapping(limit);
-            return ResponseEntity.ok().build();
+            List<TripleDto> triples = mappingService.executeTestMapping(limit);
+            return ResponseEntity.ok(triples);
         } catch (Exception e) {
             logger.error("Failed to execute test mapping", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -142,11 +141,11 @@ public class MappingController {
         }
     }
     
-//    @GetMapping(value="/mapping/execute")
-//    public ResponseEntity<?> executeMapping(
-//            @RequestParam(required=false, defaultValue="10") int limit) {
-//        logger.info("REST request to execute R2RML mapping in production mode");
-//        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-//    }
+    @GetMapping(value="/mapping/execute")
+    public ResponseEntity<?> executeMapping(
+            @RequestParam(required=false, defaultValue="10") int limit) {
+        logger.info("REST request to execute R2RML mapping");
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
     
 }
