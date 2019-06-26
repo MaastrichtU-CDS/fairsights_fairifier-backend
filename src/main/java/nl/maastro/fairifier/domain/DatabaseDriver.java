@@ -23,7 +23,12 @@ public enum DatabaseDriver {
      * Database from Comma-Separated Value (CSV) files.
      * (http://csvjdbc.sourceforge.net/)
      */
-    CSV("CSV", "org.relique.jdbc.csv.CsvDriver", null, "SELECT 1"),
+    CSV("CSV", "org.relique.jdbc.csv.CsvDriver", null, "SELECT 1") {
+        @Override
+        protected Collection<String> getUrlPrefixes() {
+            return Collections.singleton("relique:csv");
+        }
+    },
 
     /**
      * Apache Derby.
@@ -288,6 +293,20 @@ public enum DatabaseDriver {
                 if (candidate.matchProductName(productName)) {
                     return candidate;
                 }
+            }
+        }
+        return UNKNOWN;
+    }
+    
+    /**
+     * Find a {@link DatabaseDriver} for the given driver class name.
+     * @param driverClassName driver class name
+     * @return the database driver or {@link #UNKNOWN} if not found
+     */
+    public static DatabaseDriver fromDriverClassName(String driverClassName) {
+        for (DatabaseDriver driver : values()) {
+            if (driverClassName.equals(driver.getDriverClassName())) {
+                return driver;
             }
         }
         return UNKNOWN;

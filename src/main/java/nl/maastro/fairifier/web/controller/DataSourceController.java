@@ -1,6 +1,5 @@
 package nl.maastro.fairifier.web.controller;
 
-import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
 import nl.maastro.fairifier.domain.DatabaseDriver;
 import nl.maastro.fairifier.service.DataSourceService;
 import nl.maastro.fairifier.web.dto.DataSourceDto;
@@ -47,12 +47,12 @@ public class DataSourceController {
             List<DataSourceDto> dataSourceDtoList = new ArrayList<>();
             for (String dataSourceName : dataSources.keySet()) {
                 DataSource dataSource = dataSources.get(dataSourceName);
-                DatabaseMetaData databaseMetaData = dataSourceService.getDatabaseMetaData(dataSource);
-                DatabaseDriver driver = DatabaseDriver.fromProductName(databaseMetaData.getDatabaseProductName());
+                DataSourceProperties dataSourceProperties = dataSourceService.getDataSourceProperties(dataSource);
+                DatabaseDriver driver = dataSourceService.getDatabaseDriver(dataSourceName);
                 DataSourceDto dataSourceDto = new DataSourceDto();
                 dataSourceDto.setName(dataSourceName);
                 dataSourceDto.setDriver(driver);
-                dataSourceDto.setUrl(databaseMetaData.getURL());
+                dataSourceDto.setUrl(dataSourceProperties.getUrl());
                 dataSourceDtoList.add(dataSourceDto);
             }
             return ResponseEntity.ok(dataSourceDtoList);
@@ -65,13 +65,13 @@ public class DataSourceController {
     }
     
     @PostMapping("/datasource/add")
-    public ResponseEntity<Void> addDataSource(@RequestBody DataSourceDto dataSourceDto) {
+    public ResponseEntity<Void> addDataSource(@RequestBody DataSourceProperties dataSourceDto) {
         logger.info("REST request to add new dataSource: " + dataSourceDto);
         try {
             dataSourceService.addDataSource(
                     dataSourceDto.getName(),
                     dataSourceDto.getUrl(),
-                    dataSourceDto.getDriver().getDriverClassName(),
+                    dataSourceDto.getDriverClassName(),
                     dataSourceDto.getUsername(),
                     dataSourceDto.getPassword());
             return ResponseEntity.ok().build();
