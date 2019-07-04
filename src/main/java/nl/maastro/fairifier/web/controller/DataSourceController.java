@@ -106,6 +106,7 @@ public class DataSourceController {
     
     private String setResultsLimit(String sqlQuery, DatabaseDriver databaseDriver, int resultsLimit) {
         switch (databaseDriver) {
+            case CSV:
             case H2:
             case MYSQL:
             case POSTGRESQL:
