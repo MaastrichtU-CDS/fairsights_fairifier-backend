@@ -19,7 +19,7 @@ build:
     paths:
       - java/target/*.jar
   script:
-    - mvn -Dmaven.repo.local=.m2/repository clean package
+    - mvn -Dmaven.repo.local=.m2/repository -Dmaven.test.skip=true clean package
   only:
     - master
 
