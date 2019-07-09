@@ -3,23 +3,19 @@ package nl.maastro.fairifier.service;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
-import java.sql.DatabaseMetaData;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
-import org.apache.commons.rdf.api.Graph;
-import org.apache.commons.rdf.rdf4j.RDF4J;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -35,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import it.unibz.inf.ontop.injection.OntopSQLOWLAPIConfiguration;
 import it.unibz.inf.ontop.rdf4j.repository.OntopRepository;
+import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
 import nl.maastro.fairifier.web.dto.TripleDto;
 
 @Service
@@ -140,47 +137,54 @@ public class MappingService {
         SparqlUtilities.performUpdate(this.mappingRepository, sparqlUpdate);
     }
     
-    }
-    
-    public List<TripleDto> executeTestMapping(int limit) throws Exception {
-        HashMap<String, DataSource> dataSources = dataSourceService.getDataSources();
-        if (dataSources.isEmpty()) {
-            throw new Exception("No DataSources found; unable to execute mapping");
-        }
-        
-        // Assume there is a single DataSource
-        String dataSourceName = dataSources.keySet().iterator().next();
-        DataSource dataSource = dataSources.get(dataSourceName);
-        logger.info("Executing mapping for dataSource=" + dataSourceName);
-        
-        Repository virtualRdfRepository = createVirtualRdfRepository(dataSource);
-        
-        String sparqlQuery = "select * where { "
-                + "    ?s ?p ?o . " 
-                + "} limit " + limit;
-        HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(virtualRdfRepository, sparqlQuery);
+   public List<TripleDto> getTripleMaps() throws Exception {
+        String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
+                + "SELECT ?s ?p ?o " 
+                + "WHERE { " 
+                + "?s ?p ?o . ?s a rr:TriplesMap . " 
+                + "}";
+        HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(
+                this.mappingRepository, sparqlQuery);
         List<String> subjects = result.get("s");
         List<String> predicates = result.get("p");
         List<String> objects = result.get("o");
         return SparqlUtilities.createTriples(subjects, predicates, objects);
     }
     
-    private Repository createVirtualRdfRepository(DataSource dataSource) throws Exception {
-        DatabaseMetaData dataSourceMetaData = dataSourceService.getDatabaseMetaData(dataSource);
-        String jdbcUrl = dataSourceMetaData.getURL();
-//        String jdbcDriver = dataSourceMetaData.getDriverName();
-        String jdbcUser= dataSourceMetaData.getUserName();
-        String jdbcPassword = ""; // leave empty for now
-        
-        String r2rmlFile = "./mapping.ttl";
-        
+    public List<TripleDto> executeTestMapping(String dataSourceName, String r2rmlMapping, int limit) throws Exception {
+        DataSource dataSource = dataSourceService.getDataSource(dataSourceName);
+        File tempMappingFile = createTemporaryMappingFile(r2rmlMapping);
+        try {
+            Repository virtualRdfRepository = createVirtualRdfRepository(dataSource, tempMappingFile);
+            String sparqlQuery = "select * where { ?s ?p ?o . }";
+            HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(virtualRdfRepository, sparqlQuery);
+            List<String> subjects = result.get("s");
+            List<String> predicates = result.get("p");
+            List<String> objects = result.get("o");
+            return SparqlUtilities.createTriples(subjects, predicates, objects);
+        } finally {
+            tempMappingFile.delete();
+        }
+    }
+    
+    private File createTemporaryMappingFile(String r2rmlMapping) throws IOException {
+        String tempFileName = "r2rml-mapping-" + UUID.randomUUID();
+        File tempFile = File.createTempFile(tempFileName, ".ttl");
+        try (FileWriter writer = new FileWriter(tempFile)) {
+            writer.write(r2rmlMapping);
+            return tempFile;
+        }
+    }    
+    
+    private Repository createVirtualRdfRepository(DataSource dataSource, File r2rmlMappingFile) throws Exception {
+        DataSourceProperties dataSourceProperties = dataSourceService.getDataSourceProperties(dataSource);
         OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
         OntopSQLOWLAPIConfiguration repositoryConfiguration = builder
-                .jdbcUrl(jdbcUrl)
-//                .jdbcDriver(jdbcDriver)
-                .jdbcUser(jdbcUser)
-                .jdbcPassword(jdbcPassword)
-                .r2rmlMappingFile(r2rmlFile)
+                .jdbcUrl(dataSourceProperties.getUrl())
+                .jdbcDriver(dataSourceProperties.getDriverClassName())
+                .jdbcUser(dataSourceProperties.getUsername())
+                .jdbcPassword(dataSourceProperties.getPassword())
+                .r2rmlMappingFile(r2rmlMappingFile)
                 .enableTestMode()
                 .build();
         
@@ -194,21 +198,8 @@ public class MappingService {
         }
     }
     
-    private Graph getGraph() throws Exception {
-        try (RepositoryConnection connection = mappingRepository.getConnection()) {
-            connection.begin();
-            RDF4J rdf4j = new RDF4J();
-            Graph graph = rdf4j.asGraph(connection.getRepository());
-            connection.commit();
-            return graph;
-        } catch (RepositoryException e) {
-            // Turn this runtime exceptions into a checked exception
-            throw new Exception(e);
-        }
-    }
-    
     public void execute() {
-        
+        // TODO
     }
     
 }
