@@ -21,7 +21,7 @@ build:
   script:
     - mvn -Dmaven.repo.local=.m2/repository clean package
   only:
-    - 15*
+    - master
 
 dockerize:
   stage: dockerize
@@ -37,4 +37,4 @@ dockerize:
     - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA"
     - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG"
   only:
-    - 15*
+    - master
