@@ -17,7 +17,7 @@ build:
       - ./m2/repository
   artifacts:
     paths:
-      - java/target/*.jar
+      - target/*.jar
   script:
     - mvn -Dmaven.repo.local=.m2/repository clean package
   only:
