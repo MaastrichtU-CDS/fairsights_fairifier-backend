@@ -3,7 +3,6 @@ package nl.maastro.fairifier.service;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
@@ -151,9 +150,9 @@ public class MappingService {
         return SparqlUtilities.createTriples(subjects, predicates, objects);
     }
     
-    public List<TripleDto> executeTestMapping(String dataSourceName, String r2rmlMapping, int limit) throws Exception {
+    public List<TripleDto> executeTestMapping(String dataSourceName, int limit) throws Exception {
         DataSource dataSource = dataSourceService.getDataSource(dataSourceName);
-        File tempMappingFile = createTemporaryMappingFile(r2rmlMapping);
+        File tempMappingFile = saveMappingToTemporaryFile();
         try {
             Repository virtualRdfRepository = createVirtualRdfRepository(dataSource, tempMappingFile);
             String sparqlQuery = "select * where { ?s ?p ?o . }";
@@ -166,27 +165,33 @@ public class MappingService {
             tempMappingFile.delete();
         }
     }
-    
-    private File createTemporaryMappingFile(String r2rmlMapping) throws IOException {
+     
+    private File saveMappingToTemporaryFile() throws IOException {
+        RDFFormat rdfFormat = RDFFormat.TURTLE;
         String tempFileName = "r2rml-mapping-" + UUID.randomUUID();
         File tempFile = File.createTempFile(tempFileName, ".ttl");
-        try (FileWriter writer = new FileWriter(tempFile)) {
-            writer.write(r2rmlMapping);
-            return tempFile;
-        }
-    }    
+        saveMappingToFile(rdfFormat, tempFile);
+        return tempFile;
+    }
     
     private Repository createVirtualRdfRepository(DataSource dataSource, File r2rmlMappingFile) throws Exception {
         DataSourceProperties dataSourceProperties = dataSourceService.getDataSourceProperties(dataSource);
         OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
-        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder
-                .jdbcUrl(dataSourceProperties.getUrl())
-                .jdbcDriver(dataSourceProperties.getDriverClassName())
-                .jdbcUser(dataSourceProperties.getUsername())
-                .jdbcPassword(dataSourceProperties.getPassword())
-                .r2rmlMappingFile(r2rmlMappingFile)
-                .enableTestMode()
-                .build();
+        builder.jdbcUrl(dataSourceProperties.getUrl());
+        builder.jdbcDriver(dataSourceProperties.getDriverClassName());
+        builder.r2rmlMappingFile(r2rmlMappingFile);
+        if (dataSourceProperties.getUsername() == null) {
+            builder.jdbcUser("");
+        } else {
+            builder.jdbcUser(dataSourceProperties.getUsername());
+        }   
+        if (dataSourceProperties.getPassword() == null) {
+            builder.jdbcPassword("");
+        } else {
+            builder.jdbcPassword(dataSourceProperties.getPassword());
+        }
+        builder.enableTestMode();
+        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder.build();
         
         Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
         try {
