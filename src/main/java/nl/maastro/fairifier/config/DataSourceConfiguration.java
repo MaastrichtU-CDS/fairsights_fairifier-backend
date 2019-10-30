@@ -24,13 +24,8 @@ public class DataSourceConfiguration {
     
     @PostConstruct
     public void initializeDataSources() throws Exception {
-        for (DataSourceProperties dataSourceProperties : dataSourceConfigurationProperties.getDataSources())  {
-            dataSourceService.addDataSource(
-                    dataSourceProperties.getName(),
-                    dataSourceProperties.getUrl(),
-                    dataSourceProperties.getDriverClassName(),
-                    dataSourceProperties.getUsername(),
-                    dataSourceProperties.getPassword());
+        for (DataSourceProperties dataSourceProperties : dataSourceConfigurationProperties.getDataSources()) {
+            dataSourceService.addDataSource(dataSourceProperties);
         }
     }
 

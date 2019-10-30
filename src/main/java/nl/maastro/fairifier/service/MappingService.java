@@ -1,20 +1,20 @@
 package nl.maastro.fairifier.service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.DatabaseMetaData;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
-import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.query.Update;
-import org.eclipse.rdf4j.query.UpdateExecutionException;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -30,11 +30,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import it.unibz.inf.ontop.injection.OntopSQLOWLAPIConfiguration;
 import it.unibz.inf.ontop.rdf4j.repository.OntopRepository;
+import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
+import nl.maastro.fairifier.web.dto.TripleDto;
 
 @Service
 public class MappingService {
     
     private final Logger logger = LoggerFactory.getLogger(MappingService.class);
+    private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyyMMddhhmmss");
+    
+    private static final String BACKUP_DIRECTORY = ".\\backup";
     
     private Repository mappingRepository;
     private DataSourceService dataSourceService;
@@ -46,12 +51,31 @@ public class MappingService {
         this.dataSourceService = dataSourceService;
     }
     
-    public File createBackup() {
-        // TODO
-        return null;
+    @PostConstruct
+    public static void createBackupDirectory() {
+        File backupDirectory = new File(BACKUP_DIRECTORY);
+        if (!backupDirectory.isDirectory()) {
+            backupDirectory.mkdirs();
+        }
     }
     
-    public void getMappings(RDFFormat format, OutputStream stream) {
+    public File createBackup() throws Exception {
+        RDFFormat rdfFormat = RDFFormat.RDFXML;
+        String timeStamp = dateFormatter.format(new Date());
+        String extension = rdfFormat.getDefaultFileExtension();
+        String fileName = "r2ml-mapping-" + timeStamp + "." + extension;
+        File file = Paths.get(BACKUP_DIRECTORY, fileName).toFile();
+        saveMappingToFile(rdfFormat, file);
+        return file;
+    }
+    
+    private void saveMappingToFile(RDFFormat format, File file) throws FileNotFoundException, IOException {
+        try (OutputStream outputStream = new FileOutputStream(file)) {
+            getMapping(format, outputStream);
+        }
+    }
+    
+    public void getMapping(RDFFormat format, OutputStream stream) {
         try (RepositoryConnection connection = mappingRepository.getConnection()) {
             connection.begin();
             RDFHandler writer = Rio.createWriter(format, stream);
@@ -60,7 +84,7 @@ public class MappingService {
         }
     }
     
-    public void updateMappings(MultipartFile file, RDFFormat format) throws Exception {
+    public void updateMapping(MultipartFile file, RDFFormat format) throws Exception {
         if (format == null) {
             logger.info("No RDF format provided; trying to deduce RDF format from file extension");
             format = Rio.getParserFormatForFileName(file.getOriginalFilename())
@@ -69,7 +93,11 @@ public class MappingService {
             logger.info("Using RDF format: " + format);
         }
         
-        createBackup();
+        try {
+            createBackup();
+        } catch (Exception e) {
+            logger.error("Failed to create backup of current mapping", e);
+        }
         
         try (RepositoryConnection connection = mappingRepository.getConnection()) {
             connection.begin();
@@ -84,102 +112,99 @@ public class MappingService {
     }
     
     public String getSqlQuery() throws Exception {
-        
         String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
                 + "SELECT DISTINCT ?sqlQuery " 
                 + "WHERE { " 
-                + "    ?s rr:sqlQuery ?sqlQuery . " 
+                + "?s rr:sqlQuery ?sqlQuery . " 
                 + "}";
-        
-        logger.info("Executing SPARQL query on mapping repository: " + sparqlQuery);
-        
-        try (RepositoryConnection connection = mappingRepository.getConnection()) {
-            TupleQuery tupleQuery = connection.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery);
-            
-            try (TupleQueryResult result = tupleQuery.evaluate()) {
-                String sqlQueryString = null;
-                if (result.hasNext()) {
-                    BindingSet bindingSet = result.next();
-                    Value sqlQueryValue = bindingSet.getValue("sqlQuery");
-                    if (sqlQueryValue != null) {
-                        sqlQueryString =  sqlQueryValue.stringValue();
-                    }
-                }
-                
-                if (sqlQueryString == null) {
-                    logger.warn("No SQL query found in R2RML mapping");
-                }
-                return sqlQueryString;
-            }
-        } catch (MalformedQueryException | QueryEvaluationException | RepositoryException e) {
-            // Turn these runtime exceptions into a checked exception
-            throw new Exception(e);
+        HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(
+                this.mappingRepository, sparqlQuery);
+        List<String> sqlQueryValues = result.get("sqlQuery");
+        if (sqlQueryValues == null || sqlQueryValues.isEmpty()) {
+            logger.warn("No SQL query found in R2RML mapping");
+            return null;
+        } else {
+            return sqlQueryValues.get(0);
         }
     }
     
     public void updateSqlQuery(String newSqlQuery) throws Exception {
-        
         String sparqlUpdate = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
                 + "DELETE { ?s rr:sqlQuery ?oldSqlQuery } " 
                 + "INSERT { ?s rr:sqlQuery \"\"\"" + newSqlQuery + "\"\"\" } "
                 + "WHERE  { ?s rr:sqlQuery ?oldSqlQuery }";
+        SparqlUtilities.performUpdate(this.mappingRepository, sparqlUpdate);
+    }
+    
+   public List<TripleDto> getTripleMaps() throws Exception {
+        String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
+                + "SELECT ?s ?p ?o " 
+                + "WHERE { " 
+                + "?s ?p ?o . ?s a rr:TriplesMap . " 
+                + "}";
+        HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(
+                this.mappingRepository, sparqlQuery);
+        List<String> subjects = result.get("s");
+        List<String> predicates = result.get("p");
+        List<String> objects = result.get("o");
+        return SparqlUtilities.createTriples(subjects, predicates, objects);
+    }
+    
+    public List<TripleDto> executeTestMapping(String dataSourceName, int limit) throws Exception {
+        DataSource dataSource = dataSourceService.getDataSource(dataSourceName);
+        File tempMappingFile = saveMappingToTemporaryFile();
+        try {
+            Repository virtualRdfRepository = createVirtualRdfRepository(dataSource, tempMappingFile);
+            String sparqlQuery = "select * where { ?s ?p ?o . }";
+            HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(virtualRdfRepository, sparqlQuery);
+            List<String> subjects = result.get("s");
+            List<String> predicates = result.get("p");
+            List<String> objects = result.get("o");
+            return SparqlUtilities.createTriples(subjects, predicates, objects);
+        } finally {
+            tempMappingFile.delete();
+        }
+    }
+     
+    private File saveMappingToTemporaryFile() throws IOException {
+        RDFFormat rdfFormat = RDFFormat.TURTLE;
+        String tempFileName = "r2rml-mapping-" + UUID.randomUUID();
+        File tempFile = File.createTempFile(tempFileName, ".ttl");
+        saveMappingToFile(rdfFormat, tempFile);
+        return tempFile;
+    }
+    
+    private Repository createVirtualRdfRepository(DataSource dataSource, File r2rmlMappingFile) throws Exception {
+        DataSourceProperties dataSourceProperties = dataSourceService.getDataSourceProperties(dataSource);
+        OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
+        builder.jdbcUrl(dataSourceProperties.getUrl());
+        builder.jdbcDriver(dataSourceProperties.getDriverClassName());
+        builder.r2rmlMappingFile(r2rmlMappingFile);
+        if (dataSourceProperties.getUsername() == null) {
+            builder.jdbcUser("");
+        } else {
+            builder.jdbcUser(dataSourceProperties.getUsername());
+        }   
+        if (dataSourceProperties.getPassword() == null) {
+            builder.jdbcPassword("");
+        } else {
+            builder.jdbcPassword(dataSourceProperties.getPassword());
+        }
+        builder.enableTestMode();
+        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder.build();
         
-        logger.info("Executing SPARQL update on mapping repository: " + sparqlUpdate);
-                
-        try (RepositoryConnection connection = mappingRepository.getConnection()) {
-            Update update = connection.prepareUpdate(QueryLanguage.SPARQL, sparqlUpdate);
-            update.execute();
-        } catch (MalformedQueryException | UpdateExecutionException | RepositoryException e) {
-            // Turn these runtime exceptions into a checked exception
+        Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
+        try {
+            virtualRdfRepository.initialize();
+            return virtualRdfRepository;
+        } catch (RepositoryException e) {
+            // Turn this runtime exception into a checked exception
             throw new Exception(e);
         }
     }
     
-    public void executeTestMapping(int limit) throws Exception {
-        
-        String ontology = "./ROO.0.5.owl";
-        String r2rmlFile = "./mapping.ttl";
-        String sparqlQuery = "select * where { "
-                + "    ?s ?p ?o . " 
-                + "} limit 100 ";
-        
-        DataSource dataSource = dataSourceService.getDataSource("clinical1");
-        DatabaseMetaData dataSourceMetaData = dataSourceService.getDatabaseMetaData(dataSource);
-        String jdbcUrl = dataSourceMetaData.getURL();
-        String jdbcDriver = dataSourceMetaData.getDriverName();
-        String jdbcUser= dataSourceMetaData.getUserName();
-        String jdbcPassword = "";
-        
-        OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
-        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder
-                .ontologyFile(ontology)
-                .r2rmlMappingFile(r2rmlFile)
-                .jdbcUrl(jdbcUrl)
-                .jdbcDriver(jdbcDriver)
-                .jdbcUser(jdbcUser)
-                .jdbcPassword(jdbcPassword)
-                .enableTestMode()
-                .build();
-        
-        Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
-        virtualRdfRepository.initialize();
-        
-        logger.info("Starting SPARQL query...");
-        try (
-                RepositoryConnection connection = virtualRdfRepository.getConnection();
-                TupleQueryResult result = connection.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery)
-                        .evaluate()
-        ) {
-            logger.info("Parsing query result...");
-            while (result.hasNext()) {
-                BindingSet bindingSet = result.next();
-                System.out.println(bindingSet);
-            }
-        }
-    }
-    
     public void execute() {
-        
+        // TODO
     }
     
 }
