@@ -1,7 +1,6 @@
 package nl.maastro.fairifier.service;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -17,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.stereotype.Service;
 
+import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
 import nl.maastro.fairifier.domain.DatabaseDriver;
 
 @Service
@@ -25,25 +25,38 @@ public class DataSourceService {
     private final Logger logger = LoggerFactory.getLogger(DataSourceService.class);
     
     HashMap<String, DataSource> dataSources = new HashMap<>();
+    HashMap<DataSource, DataSourceProperties> dataSourceProperties = new HashMap<>();
     
     public HashMap<String, DataSource> getDataSources() {
         return this.dataSources;
     }
     
-    public DataSource addDataSource(String name, String url, String driver, 
+    public DataSource addDataSource(String name, String url, String driverClassName, 
             String username, String password) throws Exception {
+        DataSourceProperties properties = new DataSourceProperties();
+        properties.setName(name);
+        properties.setUrl(url);
+        properties.setDriverClassName(driverClassName);
+        properties.setUsername(username);
+        properties.setPassword(password);
+        return addDataSource(properties);
+    }
+    
+    public DataSource addDataSource(DataSourceProperties dataSourceProperties) throws Exception {
+        String name = dataSourceProperties.getName();
         DataSource dataSource = dataSources.get(name);
         if (dataSource != null) {
             throw new Exception("DataSource with name " + name + " already exists");
         }
         dataSource = DataSourceBuilder.create()
-                .url(url)
-                .driverClassName(driver)
-                .username(username)
-                .password(password)
+                .url(dataSourceProperties.getUrl())
+                .driverClassName(dataSourceProperties.getDriverClassName())
+                .username(dataSourceProperties.getUsername())
+                .password(dataSourceProperties.getPassword())
                 .build();
-        validateDataSource(dataSource);
-        dataSources.put(name, dataSource);
+        validateDataSource(dataSource, dataSourceProperties);
+        this.dataSources.put(name, dataSource);
+        this.dataSourceProperties.put(dataSource, dataSourceProperties);
         logger.info("Added datasource: " + name);
         return dataSource;
     }
@@ -54,6 +67,10 @@ public class DataSourceService {
             throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
         }
         return dataSource;
+    }
+    
+    public DataSourceProperties getDataSourceProperties(DataSource dataSource) {
+        return this.dataSourceProperties.get(dataSource);
     }
     
     public Map<String, List<String>> performSqlQuery(String dataSourceName, String sqlQuery) throws Exception {
@@ -76,10 +93,12 @@ public class DataSourceService {
         }
     }
     
-    private void validateDataSource(DataSource dataSource) throws Exception {
+    private void validateDataSource(DataSource dataSource, 
+            DataSourceProperties dataSourceProperties) throws Exception {
         logger.info("Validating DataSource: " + dataSource);
         try {
-            DatabaseDriver driver = getDatabaseDriver(dataSource);
+            DatabaseDriver driver = DatabaseDriver.fromDriverClassName(
+                    dataSourceProperties.getDriverClassName());
             String validationQuery = driver.getValidationQuery();
             if (validationQuery != null) {
                 performSqlQuery(dataSource, validationQuery);
@@ -89,24 +108,14 @@ public class DataSourceService {
         }
     }
     
-    public DatabaseMetaData getDatabaseMetaData(DataSource dataSource) throws SQLException {
-        try (Connection connection = dataSource.getConnection()) {
-            return connection.getMetaData();
-        }
-    }
-    
     public DatabaseDriver getDatabaseDriver(String dataSourceName) throws Exception {
-        DataSource dataSource = dataSources.get(dataSourceName);
-        if (dataSource == null) {
-            throw new Exception("No DataSource found for dataSourceName=" + dataSourceName); 
-        }
+        DataSource dataSource = getDataSource(dataSourceName);
         return getDatabaseDriver(dataSource);
     }
-    
-    private DatabaseDriver getDatabaseDriver(DataSource dataSource) throws SQLException {
-        DatabaseMetaData databaseMetaData = getDatabaseMetaData(dataSource);
-        String databaseProductName = databaseMetaData.getDatabaseProductName();
-        return DatabaseDriver.fromProductName(databaseProductName);
+
+    private DatabaseDriver getDatabaseDriver(DataSource dataSource) {
+        DataSourceProperties dataSourceProperties = this.dataSourceProperties.get(dataSource);
+        return DatabaseDriver.fromDriverClassName(dataSourceProperties.getDriverClassName());
     }
     
     private static Map<String, List<String>> toHashMap(ResultSet resultSet) throws SQLException {
