@@ -1,4 +1,4 @@
-package nl.maastro.fairifier.service;
+package nl.maastro.fairifier.utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,8 +16,6 @@ import org.eclipse.rdf4j.query.UpdateExecutionException;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
-import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.Rio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,54 +80,6 @@ public class SparqlUtilities {
             triples.add(triple);
         }
         return triples;
-    }
-    
-//    public static List<List<String>> createTriples(List<String> subjects, 
-//            List<String> predicates, List<String> objects) throws Exception {
-//        if (subjects.size() != predicates.size() || subjects.size() != objects.size()) {
-//            throw new Exception("Inequal number of subjects, predicates and objects");
-//        }
-//        List<List<String>> triples = new ArrayList<>();
-//        for (int i = 0; i < subjects.size(); i++) {
-//            List<String> triple = Arrays.asList(subjects.get(i), predicates.get(i), objects.get(i));
-//            triples.add(triple);
-//        }
-//        return triples;
-//    }
-    
-//    public static List<HashMap<String, String>> performQuery(Repository repository, String query) throws Exception {
-//        logger.info("Executing SPARQL query on RDF repository " + repository.toString() 
-//                + "; SPARQL query=" + query);
-//        try (RepositoryConnection connection = repository.getConnection()) {
-//            TupleQuery tupleQuery = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
-//            try (TupleQueryResult result = tupleQuery.evaluate()) {
-//                return parseQueryResult(result);
-//            }
-//        } catch (MalformedQueryException | QueryEvaluationException | RepositoryException e) {
-//            // Turn these runtime exceptions into a checked exception
-//            throw new Exception("SPARQL query has failed", e);
-//        }
-//    }
-//    
-//    private static List<HashMap<String, String>> parseQueryResult(TupleQueryResult queryResult) {
-//        List<HashMap<String, String>> parsedResult = new ArrayList<>();
-//        while (queryResult.hasNext()) {
-//            BindingSet bindingSet = queryResult.next();
-//            HashMap<String, String> map = new HashMap<>();
-//            bindingSet.forEach(binding -> {
-//                String variableName = binding.getName();
-//                Value value = binding.getValue();
-//                map.put(variableName, value.stringValue());
-//            });
-//            parsedResult.add(map);
-//        }
-//        logger.debug("Query results: " + parsedResult);
-//        return parsedResult;
-//    }
-    
-    public static RDFFormat getRdfFormat(String filename) throws Exception {
-        return Rio.getParserFormatForFileName(filename)
-                .orElseThrow(() -> new Exception("Unable to deduce RDF format from file name '" + filename + "'"));
     }
 
 }

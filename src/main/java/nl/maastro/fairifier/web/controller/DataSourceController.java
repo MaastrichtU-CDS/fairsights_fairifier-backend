@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
 import nl.maastro.fairifier.domain.DatabaseDriver;
 import nl.maastro.fairifier.service.DataSourceService;
+import nl.maastro.fairifier.utils.SqlUtilities;
 import nl.maastro.fairifier.web.dto.DataSourceDto;
 
 @RestController
@@ -29,11 +30,7 @@ public class DataSourceController {
     
     private final Logger logger = LoggerFactory.getLogger(DataSourceController.class);
     
-    private static final String REGEX_SELECT = "(?i)(?s)(SELECT)";
-    private static final String REGEX_SELECT_TOP = "(?i)(?s)(SELECT)(\\s+)(TOP)(\\s+)(\\(?)(\\d+)(\\)?)";
-    private static final String REGEX_LIMIT = "(?i)(?s)(LIMIT)(\\s+)(\\d+).*";
-    
-    DataSourceService dataSourceService;
+    private DataSourceService dataSourceService;
     
     public DataSourceController(DataSourceService dataSourceService) {
         this.dataSourceService = dataSourceService;
@@ -92,7 +89,7 @@ public class DataSourceController {
         try {
             if (resultsLimit != null) {
                 DatabaseDriver databaseDriver = dataSourceService.getDatabaseDriver(dataSourceName);
-                sqlQuery = setResultsLimit(sqlQuery, databaseDriver, resultsLimit);
+                sqlQuery = SqlUtilities.setResultsLimit(sqlQuery, databaseDriver, resultsLimit);
             }
             Map<String, List<String>> result = dataSourceService.performSqlQuery(dataSourceName, sqlQuery);
             return ResponseEntity.ok(result);
@@ -101,29 +98,6 @@ public class DataSourceController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header("error", e.getLocalizedMessage())
                     .build();
-        }
-    }
-    
-    private String setResultsLimit(String sqlQuery, DatabaseDriver databaseDriver, int resultsLimit) {
-        switch (databaseDriver) {
-            case CSV:
-            case H2:
-            case MYSQL:
-            case POSTGRESQL:
-                if (sqlQuery.matches(".*" + REGEX_LIMIT  + ".*")) {
-                    return sqlQuery.replaceAll(REGEX_LIMIT, "LIMIT " + resultsLimit);
-                } else {
-                    return sqlQuery + " LIMIT " + resultsLimit;
-                }
-            case SQLSERVER:
-                if (sqlQuery.matches(".*" + REGEX_SELECT_TOP + ".*")) {
-                    return sqlQuery.replaceAll(REGEX_SELECT_TOP, "SELECT TOP " + resultsLimit);
-                } else {
-                    return sqlQuery.replaceAll(REGEX_SELECT, "SELECT TOP " + resultsLimit);
-                }
-        default:
-            logger.warn("Results limit not implemented for databaseDriver: " + databaseDriver);
-            return sqlQuery;
         }
     }
 

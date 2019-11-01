@@ -6,7 +6,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +18,7 @@ import java.util.UUID;
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -25,12 +29,19 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import it.unibz.inf.ontop.injection.OntopSQLOWLAPIConfiguration;
-import it.unibz.inf.ontop.rdf4j.repository.OntopRepository;
-import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
+import net.antidot.semantic.rdf.model.impl.sesame.SesameDataSet;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.core.R2RMLProcessor;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.exception.InvalidR2RMLStructureException;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.exception.InvalidR2RMLSyntaxException;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.exception.R2RMLDataError;
+import net.antidot.sql.model.core.DriverType;
+import nl.maastro.fairifier.domain.DatabaseDriver;
+import nl.maastro.fairifier.utils.SparqlUtilities;
+import nl.maastro.fairifier.utils.SqlUtilities;
 import nl.maastro.fairifier.web.dto.TripleDto;
 
 @Service
@@ -39,7 +50,8 @@ public class MappingService {
     private final Logger logger = LoggerFactory.getLogger(MappingService.class);
     private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyyMMddhhmmss");
     
-    private static final String BACKUP_DIRECTORY = ".\\backup";
+    @Value("${fairifier.backup-directory:.\\backup}")
+    private String BACKUP_DIRECTORY;
     
     private Repository mappingRepository;
     private DataSourceService dataSourceService;
@@ -52,7 +64,7 @@ public class MappingService {
     }
     
     @PostConstruct
-    public static void createBackupDirectory() {
+    public void createBackupDirectory() {
         File backupDirectory = new File(BACKUP_DIRECTORY);
         if (!backupDirectory.isDirectory()) {
             backupDirectory.mkdirs();
@@ -134,7 +146,7 @@ public class MappingService {
                 + "INSERT { ?s rr:sqlQuery \"\"\"" + newSqlQuery + "\"\"\" } "
                 + "WHERE  { ?s rr:sqlQuery ?oldSqlQuery }";
         SparqlUtilities.performUpdate(this.mappingRepository, sparqlUpdate);
-    }
+   }
     
    public List<TripleDto> getTripleMaps() throws Exception {
         String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
@@ -149,62 +161,49 @@ public class MappingService {
         List<String> objects = result.get("o");
         return SparqlUtilities.createTriples(subjects, predicates, objects);
     }
-    
-    public List<TripleDto> executeTestMapping(String dataSourceName, int limit) throws Exception {
+   
+    public List<TripleDto> executeTestMapping(String dataSourceName, String baseUri, int resultsLimit) 
+            throws Exception {
         DataSource dataSource = dataSourceService.getDataSource(dataSourceName);
-        File tempMappingFile = saveMappingToTemporaryFile();
+        DatabaseDriver databaseDriver = dataSourceService.getDatabaseDriver(dataSource);
+        String originalSqlQuery = getSqlQuery();
+        updateSqlQuery(SqlUtilities.setResultsLimit(originalSqlQuery, databaseDriver, resultsLimit));
         try {
-            Repository virtualRdfRepository = createVirtualRdfRepository(dataSource, tempMappingFile);
-            String sparqlQuery = "select * where { ?s ?p ?o . }";
-            HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(virtualRdfRepository, sparqlQuery);
-            List<String> subjects = result.get("s");
-            List<String> predicates = result.get("p");
-            List<String> objects = result.get("o");
-            return SparqlUtilities.createTriples(subjects, predicates, objects);
+            return executeTestMapping(dataSource, databaseDriver, baseUri);
         } finally {
-            tempMappingFile.delete();
+            updateSqlQuery(originalSqlQuery);
+        }    
+    }
+    
+    private List<TripleDto> executeTestMapping(DataSource dataSource, DatabaseDriver databaseDriver, 
+            String baseUri) throws IOException, SQLException, RepositoryException, RDFParseException, 
+            InstantiationException, IllegalAccessException, ClassNotFoundException, 
+            R2RMLDataError, InvalidR2RMLStructureException, InvalidR2RMLSyntaxException {
+        File tempFile = saveMappingToTemporaryFile();
+        try (Connection connection = dataSource.getConnection()) {
+            String r2rmlFile = tempFile.getAbsolutePath().toString();
+            DriverType driverType = new DriverType(databaseDriver.getDriverClassName());
+            SesameDataSet rdfSet = R2RMLProcessor.convertDatabase(connection, r2rmlFile, baseUri, driverType);
+            List<Statement> statements = rdfSet.tuplePattern(null, null, null);
+            List<TripleDto> triples = new ArrayList<>();
+            statements.forEach(s -> {
+                String subject = s.getSubject().stringValue();
+                String predicate = s.getPredicate().stringValue();
+                String object = s.getObject().stringValue();
+                triples.add(new TripleDto(subject, predicate, object));                
+            });
+            return triples;
+        } finally {
+            tempFile.delete();
         }
     }
-     
+    
     private File saveMappingToTemporaryFile() throws IOException {
         RDFFormat rdfFormat = RDFFormat.TURTLE;
         String tempFileName = "r2rml-mapping-" + UUID.randomUUID();
         File tempFile = File.createTempFile(tempFileName, ".ttl");
         saveMappingToFile(rdfFormat, tempFile);
         return tempFile;
-    }
-    
-    private Repository createVirtualRdfRepository(DataSource dataSource, File r2rmlMappingFile) throws Exception {
-        DataSourceProperties dataSourceProperties = dataSourceService.getDataSourceProperties(dataSource);
-        OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
-        builder.jdbcUrl(dataSourceProperties.getUrl());
-        builder.jdbcDriver(dataSourceProperties.getDriverClassName());
-        builder.r2rmlMappingFile(r2rmlMappingFile);
-        if (dataSourceProperties.getUsername() == null) {
-            builder.jdbcUser("");
-        } else {
-            builder.jdbcUser(dataSourceProperties.getUsername());
-        }   
-        if (dataSourceProperties.getPassword() == null) {
-            builder.jdbcPassword("");
-        } else {
-            builder.jdbcPassword(dataSourceProperties.getPassword());
-        }
-        builder.enableTestMode();
-        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder.build();
-        
-        Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
-        try {
-            virtualRdfRepository.initialize();
-            return virtualRdfRepository;
-        } catch (RepositoryException e) {
-            // Turn this runtime exception into a checked exception
-            throw new Exception(e);
-        }
-    }
-    
-    public void execute() {
-        // TODO
     }
     
 }
