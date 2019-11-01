@@ -144,6 +144,7 @@ public class MappingController {
         try {
             List<TripleDto> triples = mappingService.executeTestMapping(
                     testMappingDto.getDataSourceName(),
+                    testMappingDto.getBaseUri(),
                     testMappingDto.getLimit());
             return ResponseEntity.ok(triples);
         } catch (Exception e) {
@@ -152,13 +153,6 @@ public class MappingController {
                     .header("errorMessage", e.getMessage())
                     .build();
         }
-    }
-    
-    @GetMapping(value="/mapping/execute")
-    public ResponseEntity<?> executeMapping(
-            @RequestParam(required=false, defaultValue="10") int limit) {
-        logger.info("REST request to execute R2RML mapping");
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
     
 }

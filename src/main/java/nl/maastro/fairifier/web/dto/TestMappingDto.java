@@ -4,8 +4,9 @@ public class TestMappingDto {
     
     private String dataSourceName;
     
-    private int limit = 10;
+    private String baseUri;
     
+    private int limit = 10;
     
     public String getDataSourceName() {
         return dataSourceName;
@@ -15,6 +16,14 @@ public class TestMappingDto {
         this.dataSourceName = dataSourceName;
     }
     
+    public String getBaseUri() {
+        return baseUri;
+    }
+
+    public void setBaseUri(String baseUri) {
+        this.baseUri = baseUri;
+    }
+
     public int getLimit() {
         return limit;
     }
