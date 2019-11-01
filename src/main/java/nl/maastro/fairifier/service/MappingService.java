@@ -29,6 +29,7 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,7 +50,8 @@ public class MappingService {
     private final Logger logger = LoggerFactory.getLogger(MappingService.class);
     private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyyMMddhhmmss");
     
-    private static final String BACKUP_DIRECTORY = ".\\backup";
+    @Value("${fairifier.backup-directory:.\\backup}")
+    private String BACKUP_DIRECTORY;
     
     private Repository mappingRepository;
     private DataSourceService dataSourceService;
@@ -62,7 +64,7 @@ public class MappingService {
     }
     
     @PostConstruct
-    public static void createBackupDirectory() {
+    public void createBackupDirectory() {
         File backupDirectory = new File(BACKUP_DIRECTORY);
         if (!backupDirectory.isDirectory()) {
             backupDirectory.mkdirs();
