@@ -35,6 +35,7 @@ import net.antidot.semantic.rdf.model.impl.sesame.SesameDataSet;
 import net.antidot.semantic.rdf.rdb2rdf.r2rml.core.R2RMLProcessor;
 import net.antidot.sql.model.core.DriverType;
 import nl.maastro.fairifier.domain.DatabaseDriver;
+import nl.maastro.fairifier.utils.SparqlUtilities;
 import nl.maastro.fairifier.web.dto.TripleDto;
 
 @Service
