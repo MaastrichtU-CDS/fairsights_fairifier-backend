@@ -68,6 +68,12 @@
             <groupId>net.antidot</groupId>
             <artifactId>db2triples</artifactId>
             <version>2.2</version>
+            <exclusions>
+              <exclusion> 
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+              </exclusion>
+            </exclusions> 
         </dependency>
 
         <!-- swagger -->
