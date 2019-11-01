@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -33,9 +34,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import net.antidot.semantic.rdf.model.impl.sesame.SesameDataSet;
 import net.antidot.semantic.rdf.rdb2rdf.r2rml.core.R2RMLProcessor;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.exception.InvalidR2RMLStructureException;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.exception.InvalidR2RMLSyntaxException;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.exception.R2RMLDataError;
 import net.antidot.sql.model.core.DriverType;
 import nl.maastro.fairifier.domain.DatabaseDriver;
 import nl.maastro.fairifier.utils.SparqlUtilities;
+import nl.maastro.fairifier.utils.SqlUtilities;
 import nl.maastro.fairifier.web.dto.TripleDto;
 
 @Service
@@ -154,14 +159,29 @@ public class MappingService {
         List<String> objects = result.get("o");
         return SparqlUtilities.createTriples(subjects, predicates, objects);
     }
-    
-    public List<TripleDto> executeTestMapping(String dataSourceName, String baseUri, int limit) throws Exception {
+   
+    public List<TripleDto> executeTestMapping(String dataSourceName, String baseUri, int resultsLimit) 
+            throws Exception {
         DataSource dataSource = dataSourceService.getDataSource(dataSourceName);
+        DatabaseDriver databaseDriver = dataSourceService.getDatabaseDriver(dataSource);
+        String originalSqlQuery = getSqlQuery();
+        updateSqlQuery(SqlUtilities.setResultsLimit(originalSqlQuery, databaseDriver, resultsLimit));
+        try {
+            return executeTestMapping(dataSource, databaseDriver, baseUri);
+        } finally {
+            updateSqlQuery(originalSqlQuery);
+        }    
+    }
+    
+    private List<TripleDto> executeTestMapping(DataSource dataSource, DatabaseDriver databaseDriver, 
+            String baseUri) throws IOException, SQLException, RepositoryException, RDFParseException, 
+            InstantiationException, IllegalAccessException, ClassNotFoundException, 
+            R2RMLDataError, InvalidR2RMLStructureException, InvalidR2RMLSyntaxException {
         File tempFile = saveMappingToTemporaryFile();
         try (Connection connection = dataSource.getConnection()) {
             String r2rmlFile = tempFile.getAbsolutePath().toString();
-            DriverType driver = getDriverType(dataSource);
-            SesameDataSet rdfSet = R2RMLProcessor.convertDatabase(connection, r2rmlFile, baseUri, driver);
+            DriverType driverType = new DriverType(databaseDriver.getDriverClassName());
+            SesameDataSet rdfSet = R2RMLProcessor.convertDatabase(connection, r2rmlFile, baseUri, driverType);
             List<Statement> statements = rdfSet.tuplePattern(null, null, null);
             List<TripleDto> triples = new ArrayList<>();
             statements.forEach(s -> {
@@ -175,18 +195,13 @@ public class MappingService {
             tempFile.delete();
         }
     }
-     
+    
     private File saveMappingToTemporaryFile() throws IOException {
         RDFFormat rdfFormat = RDFFormat.TURTLE;
         String tempFileName = "r2rml-mapping-" + UUID.randomUUID();
         File tempFile = File.createTempFile(tempFileName, ".ttl");
         saveMappingToFile(rdfFormat, tempFile);
         return tempFile;
-    }
-    
-    private DriverType getDriverType(DataSource dataSource) {
-        DatabaseDriver databaseDriver = dataSourceService.getDatabaseDriver(dataSource);
-        return new DriverType(databaseDriver.getDriverClassName());
     }
     
     public void execute() {
