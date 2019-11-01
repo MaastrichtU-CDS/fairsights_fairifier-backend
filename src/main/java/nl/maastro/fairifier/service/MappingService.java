@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -159,7 +161,15 @@ public class MappingService {
             String r2rmlFile = tempFile.getAbsolutePath().toString();
             DriverType driver = getDriverType(dataSource);
             SesameDataSet rdfSet = R2RMLProcessor.convertDatabase(connection, r2rmlFile, baseUri, driver);
-            return null;
+            List<Statement> statements = rdfSet.tuplePattern(null, null, null);
+            List<TripleDto> triples = new ArrayList<>();
+            statements.forEach(s -> {
+                String subject = s.getSubject().stringValue();
+                String predicate = s.getPredicate().stringValue();
+                String object = s.getObject().stringValue();
+                triples.add(new TripleDto(subject, predicate, object));                
+            });
+            return triples;
         } finally {
             tempFile.delete();
         }
