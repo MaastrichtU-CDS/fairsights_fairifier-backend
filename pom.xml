@@ -65,6 +65,11 @@
             <artifactId>rdf4j-client</artifactId>
             <version>${rdf4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>net.antidot</groupId>
+            <artifactId>db2triples</artifactId>
+            <version>2.2</version>
+        </dependency>
 
         <!-- swagger -->
         <dependency>
@@ -100,24 +105,6 @@
             <version>1.0.34</version>
             <scope>runtime</scope>
         </dependency>
-        
-        <!-- ontop -->
-        <dependency>
-            <groupId>it.unibz.inf.ontop</groupId>
-            <artifactId>ontop-owlapi</artifactId>
-            <version>${ontop.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.unibz.inf.ontop</groupId>
-            <artifactId>ontop-system-sql-owlapi</artifactId>
-            <version>${ontop.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>it.unibz.inf.ontop</groupId>
-            <artifactId>ontop-rdf4j</artifactId>
-            <version>${ontop.version}</version>
-        </dependency>
-        
     </dependencies>
 
     <build>

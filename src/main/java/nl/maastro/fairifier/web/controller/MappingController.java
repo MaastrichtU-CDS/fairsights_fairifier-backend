@@ -144,6 +144,7 @@ public class MappingController {
         try {
             List<TripleDto> triples = mappingService.executeTestMapping(
                     testMappingDto.getDataSourceName(),
+                    testMappingDto.getBaseUri(),
                     testMappingDto.getLimit());
             return ResponseEntity.ok(triples);
         } catch (Exception e) {

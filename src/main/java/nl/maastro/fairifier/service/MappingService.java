@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
+import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,9 +29,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import it.unibz.inf.ontop.injection.OntopSQLOWLAPIConfiguration;
-import it.unibz.inf.ontop.rdf4j.repository.OntopRepository;
-import nl.maastro.fairifier.config.DataSourceConfigurationProperties.DataSourceProperties;
+import net.antidot.semantic.rdf.model.impl.sesame.SesameDataSet;
+import net.antidot.semantic.rdf.rdb2rdf.r2rml.core.R2RMLProcessor;
+import net.antidot.sql.model.core.DriverType;
+import nl.maastro.fairifier.domain.DatabaseDriver;
 import nl.maastro.fairifier.web.dto.TripleDto;
 
 @Service
@@ -150,19 +152,16 @@ public class MappingService {
         return SparqlUtilities.createTriples(subjects, predicates, objects);
     }
     
-    public List<TripleDto> executeTestMapping(String dataSourceName, int limit) throws Exception {
+    public List<TripleDto> executeTestMapping(String dataSourceName, String baseUri, int limit) throws Exception {
         DataSource dataSource = dataSourceService.getDataSource(dataSourceName);
-        File tempMappingFile = saveMappingToTemporaryFile();
-        try {
-            Repository virtualRdfRepository = createVirtualRdfRepository(dataSource, tempMappingFile);
-            String sparqlQuery = "select * where { ?s ?p ?o . }";
-            HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(virtualRdfRepository, sparqlQuery);
-            List<String> subjects = result.get("s");
-            List<String> predicates = result.get("p");
-            List<String> objects = result.get("o");
-            return SparqlUtilities.createTriples(subjects, predicates, objects);
+        File tempFile = saveMappingToTemporaryFile();
+        try (Connection connection = dataSource.getConnection()) {
+            String r2rmlFile = tempFile.getAbsolutePath().toString();
+            DriverType driver = getDriverType(dataSource);
+            SesameDataSet rdfSet = R2RMLProcessor.convertDatabase(connection, r2rmlFile, baseUri, driver);
+            return null;
         } finally {
-            tempMappingFile.delete();
+            tempFile.delete();
         }
     }
      
@@ -174,33 +173,9 @@ public class MappingService {
         return tempFile;
     }
     
-    private Repository createVirtualRdfRepository(DataSource dataSource, File r2rmlMappingFile) throws Exception {
-        DataSourceProperties dataSourceProperties = dataSourceService.getDataSourceProperties(dataSource);
-        OntopSQLOWLAPIConfiguration.Builder<?> builder = OntopSQLOWLAPIConfiguration.defaultBuilder();
-        builder.jdbcUrl(dataSourceProperties.getUrl());
-        builder.jdbcDriver(dataSourceProperties.getDriverClassName());
-        builder.r2rmlMappingFile(r2rmlMappingFile);
-        if (dataSourceProperties.getUsername() == null) {
-            builder.jdbcUser("");
-        } else {
-            builder.jdbcUser(dataSourceProperties.getUsername());
-        }   
-        if (dataSourceProperties.getPassword() == null) {
-            builder.jdbcPassword("");
-        } else {
-            builder.jdbcPassword(dataSourceProperties.getPassword());
-        }
-        builder.enableTestMode();
-        OntopSQLOWLAPIConfiguration repositoryConfiguration = builder.build();
-        
-        Repository virtualRdfRepository = OntopRepository.defaultRepository(repositoryConfiguration);
-        try {
-            virtualRdfRepository.initialize();
-            return virtualRdfRepository;
-        } catch (RepositoryException e) {
-            // Turn this runtime exception into a checked exception
-            throw new Exception(e);
-        }
+    private DriverType getDriverType(DataSource dataSource) {
+        DatabaseDriver databaseDriver = dataSourceService.getDatabaseDriver(dataSource);
+        return new DriverType(databaseDriver.getDriverClassName());
     }
     
     public void execute() {

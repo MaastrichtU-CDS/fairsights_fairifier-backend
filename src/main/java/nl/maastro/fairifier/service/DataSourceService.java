@@ -113,7 +113,7 @@ public class DataSourceService {
         return getDatabaseDriver(dataSource);
     }
 
-    private DatabaseDriver getDatabaseDriver(DataSource dataSource) {
+    public DatabaseDriver getDatabaseDriver(DataSource dataSource) {
         DataSourceProperties dataSourceProperties = this.dataSourceProperties.get(dataSource);
         return DatabaseDriver.fromDriverClassName(dataSourceProperties.getDriverClassName());
     }
