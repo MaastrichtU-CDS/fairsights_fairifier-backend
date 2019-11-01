@@ -155,11 +155,4 @@ public class MappingController {
         }
     }
     
-    @GetMapping(value="/mapping/execute")
-    public ResponseEntity<?> executeMapping(
-            @RequestParam(required=false, defaultValue="10") int limit) {
-        logger.info("REST request to execute R2RML mapping");
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-    }
-    
 }

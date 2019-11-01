@@ -144,7 +144,7 @@ public class MappingService {
                 + "INSERT { ?s rr:sqlQuery \"\"\"" + newSqlQuery + "\"\"\" } "
                 + "WHERE  { ?s rr:sqlQuery ?oldSqlQuery }";
         SparqlUtilities.performUpdate(this.mappingRepository, sparqlUpdate);
-    }
+   }
     
    public List<TripleDto> getTripleMaps() throws Exception {
         String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
@@ -202,10 +202,6 @@ public class MappingService {
         File tempFile = File.createTempFile(tempFileName, ".ttl");
         saveMappingToFile(rdfFormat, tempFile);
         return tempFile;
-    }
-    
-    public void execute() {
-        // TODO
     }
     
 }
