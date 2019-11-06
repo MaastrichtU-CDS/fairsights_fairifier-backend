@@ -1,6 +1,6 @@
-FROM openjdk:8-jre-alpine 
+FROM  openjdk:8-jdk
 
-ADD target/*.jar /usr/local/fairifier-backend/fairifier-backend.jar
-ENTRYPOINT java -jar /usr/local/fairifier-backend/fairifier-backend.jar --spring.profiles.active=dev
+COPY target/fairifier-0.0.1-SNAPSHOT.jar /fairifier-0.0.1-SNAPSHOT.jar
 
 EXPOSE 8080
+CMD ["java", "-jar", "fairifier-0.0.1-SNAPSHOT.jar"]

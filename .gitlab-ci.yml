@@ -10,6 +10,8 @@ stages:
 build:
   stage: build
   image: maven:3.5.3-jdk-8
+  tags: 
+    - build
   cache:
     paths:
       - .m2/repository
@@ -17,17 +19,20 @@ build:
     paths:
       - target/*.jar
   script:
-    - mvn -Dmaven.repo.local=.m2/repository clean package
-  # only:
-  #  - master
+    - mvn -Dmaven.repo.local=.m2/repository -Dmaven.test.skip=true clean package
+  only:
+    - master
 
 dockerize:
   stage: dockerize
+  tags: 
+    - build
+    - docker
   dependencies:
     - build
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
     - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" .
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
-  # only:
-  #  - master
+  only:
+    - master
