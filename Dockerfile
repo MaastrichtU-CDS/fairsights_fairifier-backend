@@ -1,6 +1,13 @@
-FROM  openjdk:8-jdk
+FROM openjdk:8-jre-alpine 
 
-COPY target/fairifier-0.0.1-SNAPSHOT.jar /fairifier-0.0.1-SNAPSHOT.jar
+RUN mkdir -p /usr/share/fairifier-backend
+WORKDIR /usr/share/fairifier-backend
 
+ADD target/fairifier-*.jar /usr/share/fairifier-backend/fairifier-backend.jar
+
+RUN mkdir config
+RUN mkdir log
+VOLUME ["/usr/share/fairifier-backend/config", "/usr/share/fairifier-backend/log"]
+
+ENTRYPOINT ["/usr/bin/java", "-jar", "/usr/share/fairifier-backend/fairifier-backend.jar"]
 EXPOSE 8080
-CMD ["java", "-jar", "fairifier-0.0.1-SNAPSHOT.jar"]
