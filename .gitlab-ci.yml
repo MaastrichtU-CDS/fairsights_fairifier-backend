@@ -20,8 +20,8 @@ build:
       - target/*.jar
   script:
     - mvn -Dmaven.repo.local=.m2/repository clean package
-  only:
-    - master
+#  only:
+#    - master
 
 dockerize:
   stage: dockerize
@@ -34,5 +34,5 @@ dockerize:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
     - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" .
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
-  only:
-    - master
+#  only:
+#    - master
