@@ -114,6 +114,24 @@ public class MappingController {
         }
     }
     
+    @GetMapping(value="/mapping/table-columns")
+    public ResponseEntity<List<String>> getTableColumns() {
+        logger.info("REST request to get columns of logical table");
+        try {
+            List<String> tableColumns = mappingService.getTableColumns();
+            if (tableColumns == null) {
+                return ResponseEntity.notFound().build();
+            } else {
+                return ResponseEntity.ok(tableColumns);                
+            }
+        } catch (Exception e) {
+            logger.error("Failed to get logical table columns from R2RML mapping", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("errorMessage", e.getMessage())
+                    .build();
+        }
+    }
+    
     @GetMapping(value="/mapping/triplemaps")
     public ResponseEntity<List<TripleDto>> getAllTripleMaps() {
         logger.info("REST request to get all tripleMap definitions in current R2RML mapping");

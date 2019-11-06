@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -127,7 +128,8 @@ public class MappingService {
         String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
                 + "SELECT DISTINCT ?sqlQuery " 
                 + "WHERE { " 
-                + "?s rr:sqlQuery ?sqlQuery . " 
+                + "   ?s a rr:LogicalTable;"
+                + "   rr:sqlQuery ?sqlQuery . " 
                 + "}";
         HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(
                 this.mappingRepository, sparqlQuery);
@@ -146,9 +148,29 @@ public class MappingService {
                 + "INSERT { ?s rr:sqlQuery \"\"\"" + newSqlQuery + "\"\"\" } "
                 + "WHERE  { ?s rr:sqlQuery ?oldSqlQuery }";
         SparqlUtilities.performUpdate(this.mappingRepository, sparqlUpdate);
-   }
+    }
     
-   public List<TripleDto> getTripleMaps() throws Exception {
+    public List<String> getTableColumns() throws Exception {
+        String sparqlQuery = "PREFIX map: <http://mapping.local/> "
+                + "PREFIX rr: <http://www.w3.org/ns/r2rml#> "
+                + "PREFIX skos: <http://www.w3.org/2008/05/skos#> "  
+                + "SELECT DISTINCT ?tableColumns " 
+                + "WHERE { " 
+                + "   ?s a rr:LogicalTable; "
+                + "   skos:definition ?tableColumns . " 
+                + "}";
+        HashMap<String, List<String>> result = SparqlUtilities.performTupleQuery(
+                this.mappingRepository, sparqlQuery);
+        List<String> tableColumns = result.get("tableColumns");
+        if (tableColumns == null || tableColumns.isEmpty()) {
+            logger.warn("No table column definition found in R2RML mapping");
+            return null;
+        } else {
+            return Arrays.asList(tableColumns.get(0).split(","));
+        }
+    }
+    
+    public List<TripleDto> getTripleMaps() throws Exception {
         String sparqlQuery = "PREFIX rr: <http://www.w3.org/ns/r2rml#> " 
                 + "SELECT ?s ?p ?o " 
                 + "WHERE { " 
