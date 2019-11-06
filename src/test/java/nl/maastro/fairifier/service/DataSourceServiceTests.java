@@ -16,7 +16,7 @@ import nl.maastro.fairifier.domain.DatabaseDriver;
 public class DataSourceServiceTests {
     
     private static final String H2_URL = "jdbc:h2:file:./src/test/resources/h2/test";
-    private static final String CSV_URL = "jdbc:relique:csv:./src/test/resources/csv";
+    private static final String CSV_URL = "jdbc:relique:csv:./testCsv";
     private static final String MSSQL_URL = "URL of some test MSSQL database";
     private static final String POSTGRESQL_URL = "URL of some test POSTGRESQL database";
         
