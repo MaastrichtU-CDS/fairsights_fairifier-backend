@@ -1,13 +1,13 @@
 FROM openjdk:8-jre-alpine 
 
-RUN mkdir -p /usr/share/fairifier-backend
-WORKDIR /usr/share/fairifier-backend
+RUN mkdir -p /app/fairifier-backend
+WORKDIR /app/fairifier-backend
 
-ADD target/fairifier-*.jar /usr/share/fairifier-backend/fairifier-backend.jar
+ADD target/fairifier-*.jar /app/fairifier-backend/fairifier-backend.jar
 
 RUN mkdir config
 RUN mkdir log
-VOLUME ["/usr/share/fairifier-backend/config", "/usr/share/fairifier-backend/log"]
+VOLUME ["/app/fairifier-backend/config", "/app/fairifier-backend/log"]
 
-ENTRYPOINT ["/usr/bin/java", "-jar", "/usr/share/fairifier-backend/fairifier-backend.jar"]
+ENTRYPOINT ["/usr/bin/java", "-jar", "/app/fairifier-backend/fairifier-backend.jar"]
 EXPOSE 8080
